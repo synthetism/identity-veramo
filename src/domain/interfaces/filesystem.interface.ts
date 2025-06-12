@@ -44,7 +44,7 @@ export interface IFileSystem {
    * @param dirPath Directory path
    */
   readDir(dirPath: string): Promise<string[]>;
-  
+
   /**
    *  Synchronously read a directory and return its contents
    * @param dirPath Directory path
@@ -53,7 +53,7 @@ export interface IFileSystem {
    */
 
   readDirSync(dirPath: string): string[];
-  
+
   /**
    * Ensure a directory exists
    * @param path Directory path

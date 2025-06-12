@@ -36,7 +36,7 @@ export class FileDIDStore extends AbstractDIDStore {
     return true;
   }
 
-  async listDIDs(args: IIdentifier): Promise<IIdentifier[]> {
+  async listDIDs(_args: IIdentifier): Promise<IIdentifier[]> {
     const data = this.loadData();
     return Object.values(data.dids) as IIdentifier[];
   }

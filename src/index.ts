@@ -25,7 +25,6 @@ import os from "node:os";
 import * as file from "./infrastructure/adapters/veramo";
 import type { IIndexer } from "./domain/interfaces/indexer.interface";
 
-
 // Export domain entities, interfaces and common utilities
 export * from "./domain/common/indexer";
 
@@ -59,8 +58,8 @@ export function createIdentityService(
   const effectiveLogger = logger || getNullLogger();
   const storeDir =
     options.storeDir || path.join(os.homedir(), ".synet", "identity");
-    let agent: TAgent<IKeyManager & IDIDManager>;
-    let idIndexer: IIndexer;
+  let agent: TAgent<IKeyManager & IDIDManager>;
+  let idIndexer: IIndexer;
 
   switch (storageType) {
     case StorageType.FILE: {

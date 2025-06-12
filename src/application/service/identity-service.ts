@@ -173,7 +173,6 @@ export class IdentityService {
       this.logInfo(`Getting identity with alias or DID "${aliasOrDid}"...`);
       const entry = this.indexer.get(aliasOrDid);
       return Result.success(entry);
-
     } catch (error) {
       this.logError(`Failed to get identity: ${error}`);
       return Result.fail(
@@ -182,7 +181,7 @@ export class IdentityService {
       );
     }
   }
-  
+
   /**
    * Update an identity's alias
    */
@@ -217,7 +216,6 @@ export class IdentityService {
           `Failed to update DID alias: ${didResult.errorMessage}`,
         );
       }
-     
 
       // 5. Remove old index entry
       this.indexer.delete(currentAlias);
@@ -305,7 +303,6 @@ export class IdentityService {
   }
 
   public test() {
-
     this.logInfo("IdentityService is working!");
   }
 
