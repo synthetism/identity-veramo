@@ -22,6 +22,10 @@ import {
 import path from "node:path";
 import os from "node:os";
 
+import * as file from "./infrastructure/adapters/veramo";
+import type { IIndexer } from "./domain/interfaces/indexer.interface";
+
+
 // Export domain entities, interfaces and common utilities
 export * from "./domain/common/indexer";
 
@@ -35,10 +39,7 @@ export * from "./infrastructure/filesystem/memory";
 // Export store interfaces
 export * from "./infrastructure/stores/did-store";
 export * from "./infrastructure/stores/key-store";
-
-import * as file from "./infrastructure/adapters/veramo";
-
-import type { IIndexer } from "./domain/interfaces/indexer.interface";
+export { IIdentifier, IKey } from "@veramo/core";
 
 export enum StorageType {
   FILE = "file",

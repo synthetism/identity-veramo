@@ -304,6 +304,11 @@ export class IdentityService {
     }
   }
 
+  public test() {
+
+    this.logInfo("IdentityService is working!");
+  }
+
   private logInfo(message: string): void {
     this.logger?.info(message);
   }
