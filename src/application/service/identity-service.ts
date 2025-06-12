@@ -4,7 +4,7 @@ import type { IDidStore } from "../../infrastructure/stores/did-store";
 import type { IKeyStore } from "../../infrastructure/stores/key-store";
 import type { IIndexer } from "../../domain/interfaces/indexer.interface";
 import type { IndexEntry } from "../../domain/common/indexer";
-import type { IIdentifier, KeyMetadata, IKey } from "@veramo/core";
+import type { IIdentifier, KeyMetadata, IKey, TKeyType } from "@veramo/core";
 
 /**
  * Identity Service Options
@@ -301,6 +301,42 @@ export class IdentityService {
       );
     }
   }
+
+    /**
+   * Get only the public key for a DID
+   * @param didOrAlias DID or alias
+   * @param keyType Optional key type (e.g. 'rsa', 'ed25519')
+   * @returns Result with public key object
+   * @returns kid - Key ID
+   * @returns publicKeyHex - Public key in hex format
+   */
+  async getPublicKey(didOrAlias: string, keyType?: TKeyType | 'Ed25519'): Promise<Result<IKey | null>> {
+    try {
+      // Get the identity details
+      const result = await this.getIdentityDetails(didOrAlias);
+      if (!result.isSuccess || !result.value) {
+        return Result.fail(
+          result.errorMessage || "Identity not found",
+          result.errorCause
+        );
+      }
+      
+      // Find the specific key
+      const identity = result.value;
+      const keys = identity.keys;
+      
+      // If keyType is specified, find that specific key
+      if (keyType) {
+        const matchingKey = keys.find(key => key.type.toLowerCase() === keyType.toLowerCase());
+        return Result.success(matchingKey || null);
+      }
+
+      // Otherwise return the first available key
+      return Result.success(keys.length > 0 ? keys[0] : null);
+    } catch (error) {
+      return Result.fail(`Error getting public key: ${error}`);
+    }
+}
 
   public test() {
     this.logInfo("IdentityService is working!");
