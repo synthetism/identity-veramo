@@ -51,7 +51,7 @@ export class NodeFileSystem implements IFileSystem {
     if (fSync.existsSync(path)) {
       fSync.rmdirSync(path, { recursive: true });
     }
-  } 
+  }
 
   async ensureDir(dirPath: string): Promise<void> {
     try {

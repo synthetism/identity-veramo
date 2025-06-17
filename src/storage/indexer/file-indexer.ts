@@ -26,9 +26,11 @@ export class FileIndexer implements IIndexer<IndexEntry> {
 
   find(keyword: string): IndexEntry | null {
     const index = this.loadIndex();
-    return Object.values(index).find(
-      (entry) => entry.alias === keyword || entry.did === keyword,
-    ) || null;
+    return (
+      Object.values(index).find(
+        (entry) => entry.alias === keyword || entry.did === keyword,
+      ) || null
+    );
   }
 
   findByAlias(alias: string): IndexEntry | null {

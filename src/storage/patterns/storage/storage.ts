@@ -3,7 +3,7 @@
 */
 export interface IStorage<T> {
   exists(id: string): boolean;
-  create(id:string,data: T): void;
+  create(id: string, data: T): void;
   get(id: string): T | null;
   delete(id: string): boolean;
   list(): T[];

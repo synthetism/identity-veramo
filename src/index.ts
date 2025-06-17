@@ -11,7 +11,7 @@ import { KeyManager } from "@veramo/key-manager";
 import { KeyManagementSystem } from "@veramo/kms-local";
 import { DIDManager } from "@veramo/did-manager";
 import { KeyDIDProvider } from "@veramo/did-provider-key";
-import { CredentialPlugin } from '@veramo/credential-w3c'
+import { CredentialPlugin } from "@veramo/credential-w3c";
 import { getNullLogger, type Logger } from "@synet/logger";
 
 /* Storage */
@@ -26,8 +26,11 @@ import type { IStorage } from "./storage/patterns/storage/promises";
 import { DidService } from "./services/did-service";
 import { KeyService } from "./services/key-service";
 
-import { VCService, type VCServiceOptions, type IVCService } from "./services/vc-service";
-
+import {
+  VCService,
+  type VCServiceOptions,
+  type IVCService,
+} from "./services/vc-service";
 
 import {
   IdentityService,
@@ -37,13 +40,12 @@ import {
 import path from "node:path";
 import os from "node:os";
 
-
 import type { IFileIndexer } from "./storage/indexer/file-indexer.interface";
-import  {
+import {
   FilePrivateKeyStore,
   FileKeyStore,
   FileDIDStore,
-  FileVCStore
+  FileVCStore,
 } from "./storage/adapters/file/";
 
 // Export domain entities, interfaces and common utilities
@@ -112,7 +114,6 @@ export function createIdentityService(
     effectiveLogger
   ); */
 
-
   const didStore = new DidService(agent, effectiveLogger);
   const keyStore = new KeyService(agent, effectiveLogger);
 
@@ -125,7 +126,6 @@ export function createIdentityService(
   );
 }
 
-
 // Add a standalone function to create just the VC service
 export function createVCService(
   storageType: StorageType = StorageType.FILE,
@@ -133,12 +133,13 @@ export function createVCService(
   logger?: Logger,
 ): VCService {
   const effectiveLogger = logger || getNullLogger();
-  const storeDir = options.storeDir || path.join(os.homedir(), ".synet", "identity");
+  const storeDir =
+    options.storeDir || path.join(os.homedir(), ".synet", "identity");
   const agent = createAgentWithKMS(storeDir, effectiveLogger);
-  
+
   // Set up storage based on type
   let storage: IStorage<W3CVerifiableCredential>;
-  
+
   if (storageType === StorageType.FILE) {
     const fileSystem = new NodeFileSystem();
     fileSystem.ensureDirSync(storeDir);
@@ -149,17 +150,11 @@ export function createVCService(
     fileSystem.ensureDir(tempDir);
     storage = new FileVCStore(path.join(tempDir, "credentials"), fileSystem);
   }
-  
-  return new VCService(
-    agent, 
-    storage,
-    options,
-    effectiveLogger
-  );
+
+  return new VCService(agent, storage, options, effectiveLogger);
 }
 
-
-function createAgentWithKMS( 
+function createAgentWithKMS(
   storeDir: string,
   logger?: Logger,
 ): TAgent<IKeyManager & IDIDManager & ICredentialPlugin> {

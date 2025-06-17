@@ -1,6 +1,6 @@
 /**
  * Interface for a generic indexer
-*/
+ */
 
 export interface IIndexer<T> {
   exists(): boolean;

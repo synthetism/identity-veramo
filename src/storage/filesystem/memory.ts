@@ -85,7 +85,6 @@ export class MemFileSystem implements IFileSystem {
       }
     }
   }
-  
 
   async ensureDir(path: string): Promise<void> {
     try {

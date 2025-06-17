@@ -21,7 +21,7 @@ export interface IFileIndexer extends IIndexer<IndexEntry> {
   exists(): boolean;
 
   find(keyword: string): IndexEntry | null;
-  
+
   /**
    * Find entry by alias
    */
