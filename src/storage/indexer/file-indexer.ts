@@ -1,14 +1,13 @@
-import fs from "node:fs";
 import path from "node:path";
-import type { IndexEntry, IndexRecord } from "../../domain/common/indexer";
-import type { IIndexer } from "../../domain/interfaces/indexer.interface";
-import type { IFileSystem } from "../../domain/interfaces/filesystem.interface";
+import type { IndexEntry, IndexRecord } from "./types";
+import type { IIndexer } from "./file-indexer.interface";
+import type { IFileSystem } from "../filesystem/filesystem.interface";
 import type { Logger } from "@synet/logger";
 
 /**
  * File-based implementation of the IDL indexer
  */
-export class FileIndexer implements IIndexer {
+export class FileIndexer implements IIndexer<IndexEntry> {
   private indexPath: string;
   private index: IndexRecord | null = null;
 
@@ -21,8 +20,15 @@ export class FileIndexer implements IIndexer {
     this.ensureIndexDirectory();
   }
 
-  indexExists(): boolean {
+  exists(): boolean {
     return this.filesystem.existsSync(this.indexPath);
+  }
+
+  find(keyword: string): IndexEntry | null {
+    const index = this.loadIndex();
+    return Object.values(index).find(
+      (entry) => entry.alias === keyword || entry.did === keyword,
+    ) || null;
   }
 
   findByAlias(alias: string): IndexEntry | null {
@@ -115,7 +121,7 @@ export class FileIndexer implements IIndexer {
   }
 
   private loadIndex(): IndexRecord {
-    if (!this.indexExists()) {
+    if (!this.exists()) {
       return {}; // Simple empty object
     }
 

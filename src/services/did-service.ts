@@ -11,7 +11,7 @@ import type { IDIDManager, IIdentifier, TAgent, TKeyType } from "@veramo/core";
  * @method update: Update a DID's alias or other properties
  * @method delete: Delete a DID by its identifier
  */
-export interface IDidStore {
+export interface IDidService {
   create(
     alias: string,
     options?: { keyId: string; keyType?: TKeyType },
@@ -26,9 +26,9 @@ export interface IDidStore {
 }
 
 /**
- * Veramo implementation of the DID store
+ * Veramo implementation of the DID service
  */
-export class VeramoDidStore implements IDidStore {
+export class DidService implements IDidService {
   constructor(
     private agent: TAgent<IDIDManager>,
     private logger?: Logger,

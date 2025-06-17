@@ -40,6 +40,11 @@ export interface IFileSystem {
   deleteFile(path: string): Promise<void>;
 
   /**
+   *  Synchronously delete a directory
+   * @param path Directory path
+   */
+  deleteDir(path: string): Promise<void>;
+  /**
    * Read a directory and return its contents
    * @param dirPath Directory path
    */

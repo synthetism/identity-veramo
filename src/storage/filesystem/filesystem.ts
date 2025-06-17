@@ -1,6 +1,6 @@
 import * as fs from "node:fs/promises";
 import fSync from "node:fs";
-import type { IFileSystem } from "../../domain/interfaces/filesystem.interface";
+import type { IFileSystem } from "./filesystem.interface";
 
 /**
  * Node.js implementation of FileSystem interface
@@ -32,6 +32,26 @@ export class NodeFileSystem implements IFileSystem {
   async deleteFile(path: string): Promise<void> {
     return fs.unlink(path);
   }
+
+  async deleteDir(path: string): Promise<void> {
+    try {
+      await fs.rmdir(path, { recursive: true });
+    } catch (error: unknown) {
+      if (
+        error instanceof Error &&
+        "code" in error &&
+        (error as NodeJS.ErrnoException).code !== "ENOENT"
+      ) {
+        throw error;
+      }
+    }
+  }
+
+  deleteDirSync(path: string): void {
+    if (fSync.existsSync(path)) {
+      fSync.rmdirSync(path, { recursive: true });
+    }
+  } 
 
   async ensureDir(dirPath: string): Promise<void> {
     try {

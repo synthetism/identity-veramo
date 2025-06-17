@@ -1,9 +1,9 @@
 import { Result } from "@synet/patterns";
 import type { Logger } from "@synet/logger";
-import type { IDidStore } from "../../infrastructure/stores/did-store";
-import type { IKeyStore } from "../../infrastructure/stores/key-store";
-import type { IIndexer } from "../../domain/interfaces/indexer.interface";
-import type { IndexEntry } from "../../domain/common/indexer";
+import type { IDidService } from "./did-service";
+import type { IKeyService } from "./key-service";
+import type { IFileIndexer } from "../storage/indexer/file-indexer.interface";
+import type { IndexEntry } from "../storage/indexer/types";
 import type { IIdentifier, KeyMetadata, IKey, TKeyType } from "@veramo/core";
 
 /**
@@ -11,6 +11,7 @@ import type { IIdentifier, KeyMetadata, IKey, TKeyType } from "@veramo/core";
  */
 export interface IdentityServiceOptions {
   storeDir?: string;
+  defaultIssuerDid?: string; // Default DID to use if none provided
 }
 
 /**
@@ -19,9 +20,9 @@ export interface IdentityServiceOptions {
  */
 export class IdentityService {
   constructor(
-    private didStore: IDidStore,
-    private keyStore: IKeyStore,
-    private indexer: IIndexer, // Now just using the indexer
+    private didStore: IDidService,
+    private keyStore: IKeyService,
+    private indexer: IFileIndexer, // Now just using the indexer
     public readonly options: IdentityServiceOptions = {},
     public readonly logger?: Logger,
   ) {}

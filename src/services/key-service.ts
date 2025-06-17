@@ -15,16 +15,16 @@ import type {
  * @method get: Retrieve a key by its ID
  * @method delete: Delete a key by its ID
  */
-export interface IKeyStore {
+export interface IKeyService {
   create(type: TKeyType, meta?: KeyMetadata): Promise<Result<IKey>>;
   get(kid: string): Promise<Result<IKey>>;
   delete(kid: string): Promise<Result<boolean>>;
 }
 
 /**
- * Veramo implementation of the key store
+ * Veramo implementation of the key service
  */
-export class VeramoKeyStore implements IKeyStore {
+export class KeyService implements IKeyService {
   constructor(
     private agent: TAgent<IKeyManager>,
     private logger?: Logger,
@@ -76,11 +76,4 @@ export class VeramoKeyStore implements IKeyStore {
     }
   }
 
-  private logInfo(message: string): void {
-    this.logger?.info(message);
-  }
-
-  private logError(message: string, error?: unknown): void {
-    this.logger?.error(message, error);
-  }
 }

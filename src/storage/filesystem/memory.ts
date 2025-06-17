@@ -1,5 +1,5 @@
 import { fs as memfs } from "memfs";
-import type { IFileSystem } from "../../domain/interfaces/filesystem.interface";
+import type { IFileSystem } from "./filesystem.interface";
 
 /**
  * In-memory file system implementation using memfs
@@ -64,6 +64,28 @@ export class MemFileSystem implements IFileSystem {
       throw new Error(`Failed to delete file ${path}: ${error}`);
     }
   }
+
+  async deleteDir(path: string): Promise<void> {
+    try {
+      await memfs.promises.rmdir(path, { recursive: true });
+    } catch (error) {
+      // Ignore error if directory does not exist
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+        throw new Error(`Failed to delete directory ${path}: ${error}`);
+      }
+    }
+  }
+  deleteDirSync(path: string): void {
+    try {
+      memfs.rmdirSync(path, { recursive: true });
+    } catch (error) {
+      // Ignore error if directory does not exist
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+        throw new Error(`Failed to delete directory ${path}: ${error}`);
+      }
+    }
+  }
+  
 
   async ensureDir(path: string): Promise<void> {
     try {

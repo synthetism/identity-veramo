@@ -5,8 +5,9 @@
 		"clientKind": "git",
 		"useIgnoreFile": false
 	},
-	"files": {
-		"ignoreUnknown": false
+		"files": {
+		"ignoreUnknown": false,
+		"ignore": ["docs/**", "dist/**", "node_modules/**", "coverage/**", "test/**", "tests/**", "examples/**", "scripts/**"]	
 	},
 	"formatter": {
 		"enabled": true,
