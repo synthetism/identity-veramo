@@ -1,15 +1,18 @@
 import type { IKey } from "@veramo/core";
 import { AbstractKeyStore } from "@veramo/key-manager";
-
+import VError  from "verror";
+import type { Logger } from "@synet/logger";
 import fs from "node:fs";
 
 // File-based key store implementation
 export class FileKeyStore extends AbstractKeyStore {
-  private filePath: string;
 
-  constructor(filePath: string) {
+
+  constructor(
+    private readonly filePath: string,
+    private readonly logger?: Logger,
+  ) {
     super();
-    this.filePath = filePath;
   }
 
   async getKey({ kid }: { kid: string }): Promise<IKey> {
@@ -31,7 +34,7 @@ export class FileKeyStore extends AbstractKeyStore {
       this.saveData(data);
       return true;
     } catch (error) {
-      console.error("Error importing key:", error);
+      this.logger?.error("Error importing key:", error);
       return false;
     }
   }
@@ -53,6 +56,19 @@ export class FileKeyStore extends AbstractKeyStore {
   }
 
   private saveData(data: Record<string, IKey>) {
-    fs.writeFileSync(this.filePath, JSON.stringify(data, null, 2));
+
+    try {
+        fs.writeFileSync(this.filePath, JSON.stringify(data, null, 2));
+        } catch (error: unknown) {
+          this.logger?.error(`Error saving Key data: ${error instanceof Error ? error.message : String(error)}`);
+           throw new VError(
+            { 
+              name: "FileKeyStoreError", 
+              cause: error instanceof Error ? error : undefined, 
+            },
+            `Failed to save Key data to file: ${this.filePath}`,
+          );
+        }
+    }
   }
-}
+

@@ -14,12 +14,14 @@ import { KeyDIDProvider } from "@veramo/did-provider-key";
 import { CredentialPlugin } from "@veramo/credential-w3c";
 import { getNullLogger, type Logger } from "@synet/logger";
 
+
 /* Storage */
 
+import type { IFileSystem } from "./storage/filesystem/filesystem.interface";
+import type { IStorage } from "./storage/patterns/storage/promises";
 import { createIndexer } from "./storage/indexer/indexer-factory";
 import { NodeFileSystem } from "./storage/filesystem/filesystem";
 import { MemFileSystem } from "./storage/filesystem/memory";
-import type { IStorage } from "./storage/patterns/storage/promises";
 
 /* Services */
 
@@ -41,12 +43,9 @@ import path from "node:path";
 import os from "node:os";
 
 import type { IFileIndexer } from "./storage/indexer/file-indexer.interface";
-import {
-  FilePrivateKeyStore,
-  FileKeyStore,
-  FileDIDStore,
-  FileVCStore,
-} from "./storage/adapters/file/";
+
+import { createStorageAdapters, type StorageAdapters } from "./storage/adapters/adapter-factory";
+
 
 // Export domain entities, interfaces and common utilities
 
@@ -71,51 +70,27 @@ export enum StorageType {
  * Create an identity service with the specified storage type
  */
 export function createIdentityService(
-  storageType: StorageType = StorageType.FILE,
   options: IdentityServiceOptions = {},
   logger?: Logger,
 ): IdentityService {
-  const effectiveLogger = logger || getNullLogger();
-  const storeDir =
-    options.storeDir || path.join(os.homedir(), ".synet", "identity");
-  let agent: TAgent<IKeyManager & IDIDManager & ICredentialPlugin>;
-  let idIndexer: IFileIndexer;
+   
+   const effectiveLogger = logger || getNullLogger();
+   const storeDir =
+   options.storeDir || path.join(os.homedir(), ".synet", "identity");
 
-  switch (storageType) {
-    case StorageType.FILE: {
-      const fileSystem = new NodeFileSystem();
-      fileSystem.ensureDirSync(storeDir);
-      idIndexer = createIndexer(storeDir, fileSystem, logger);
-      agent = createAgentWithKMS(storeDir, effectiveLogger);
-      break;
-    }
+   const filesystem = new NodeFileSystem();
+   const idIndexer = createIndexer(storeDir, filesystem, logger);
 
-    case StorageType.MEMORY: {
-      const fileSystem = new MemFileSystem();
-      const tempDir = "/tmp/.synet/identity";
-      fileSystem.ensureDir(tempDir);
-      idIndexer = createIndexer(tempDir, fileSystem, logger);
-      agent = createAgentWithKMS(tempDir, effectiveLogger);
-      break;
-    }
+   const adapters = createStorageAdapters({
+     storeDir,
+     filesystem,
+     logger: effectiveLogger
+   });
 
-    default:
-      throw new Error(`Unsupported storage type: ${storageType}`);
-  }
+   const agent = createAgentWithKMS(adapters);
 
-  /* 
-  const fileSystem = storageType === StorageType.FILE ? new NodeFileSystem() : new MemFileSystem();
-  const vcStore = new FileVCStore(path.join(storeDir, "credentials"), fileSystem);
-
-  const vcService = new VCService(
-    agent, 
-    vcStore,
-    { defaultIssuerDid: options.defaultIssuerDid },
-    effectiveLogger
-  ); */
-
-  const didStore = new DidService(agent, effectiveLogger);
-  const keyStore = new KeyService(agent, effectiveLogger);
+   const didStore = new DidService(agent, effectiveLogger);
+   const keyStore = new KeyService(agent, effectiveLogger);
 
   return new IdentityService(
     didStore,
@@ -128,52 +103,45 @@ export function createIdentityService(
 
 // Add a standalone function to create just the VC service
 export function createVCService(
-  storageType: StorageType = StorageType.FILE,
   options: VCServiceOptions & { storeDir?: string } = {},
   logger?: Logger,
 ): VCService {
   const effectiveLogger = logger || getNullLogger();
   const storeDir =
     options.storeDir || path.join(os.homedir(), ".synet", "identity");
-  const agent = createAgentWithKMS(storeDir, effectiveLogger);
+      
+  const filesystem = new NodeFileSystem();
 
-  // Set up storage based on type
-  let storage: IStorage<W3CVerifiableCredential>;
+  const adapters = createStorageAdapters({
+    storeDir,
+    filesystem,
+    logger: effectiveLogger
+  });
+  
+  const agent = createAgentWithKMS(adapters);
 
-  if (storageType === StorageType.FILE) {
-    const fileSystem = new NodeFileSystem();
-    fileSystem.ensureDirSync(storeDir);
-    storage = new FileVCStore(path.join(storeDir, "credentials"), fileSystem);
-  } else {
-    const fileSystem = new MemFileSystem();
-    const tempDir = "/tmp/.synet/identity";
-    fileSystem.ensureDir(tempDir);
-    storage = new FileVCStore(path.join(tempDir, "credentials"), fileSystem);
-  }
-
-  return new VCService(agent, storage, options, effectiveLogger);
+  return new VCService(agent, adapters.vcStore, options, effectiveLogger);
 }
 
 function createAgentWithKMS(
-  storeDir: string,
-  logger?: Logger,
+  adapters: StorageAdapters,
+
 ): TAgent<IKeyManager & IDIDManager & ICredentialPlugin> {
-  const keyStorePath = path.join(storeDir, "keystore.json");
-  const privateKeyStorePath = path.join(storeDir, "private-keystore.json");
-  const didStorePath = path.join(storeDir, "didstore.json");
+
+  const { keyStore, didStore, privateKeyStore } = adapters;
 
   return createAgent<IKeyManager & IDIDManager & ICredentialPlugin>({
     plugins: [
       new KeyManager({
-        store: new FileKeyStore(keyStorePath),
+        store: keyStore,
         kms: {
           local: new KeyManagementSystem(
-            new FilePrivateKeyStore(privateKeyStorePath),
+            privateKeyStore,
           ),
         },
       }),
       new DIDManager({
-        store: new FileDIDStore(didStorePath),
+        store: didStore,
         defaultProvider: "did:key",
         providers: {
           "did:key": new KeyDIDProvider({

@@ -5,13 +5,18 @@ import {
 } from "@veramo/key-manager";
 import fs from "node:fs";
 import crypto from "node:crypto";
+import VError  from "verror";
+import type { Logger } from "@synet/logger";
 // File-based private key store implementation
 export class FilePrivateKeyStore extends AbstractPrivateKeyStore {
-  private filePath: string;
 
-  constructor(filePath: string) {
+
+  constructor(
+    private readonly filePath: string,
+    private readonly logger?: Logger,
+  ) {
     super();
-    this.filePath = filePath;
+
   }
 
   async getKey({ alias }: { alias: string }): Promise<ManagedPrivateKey> {
@@ -21,13 +26,13 @@ export class FilePrivateKeyStore extends AbstractPrivateKeyStore {
 
   async deleteKey({ alias }: { alias: string }): Promise<boolean> {
     const data = this.loadData();
-    console.log(`Attempting to delete key with alias: ${alias}`);
+    this.logger?.info(`Attempting to delete key with alias: ${alias}`);
 
     // First, try direct match
     if (data.keys[alias]) {
       delete data.keys[alias];
       this.saveData(data);
-      console.log(`Successfully deleted key with alias: ${alias}`);
+      this.logger?.info(`Successfully deleted key with alias: ${alias}`);
       return true;
     }
 
@@ -37,17 +42,17 @@ export class FilePrivateKeyStore extends AbstractPrivateKeyStore {
     const keys = Object.entries(data.keys);
     for (const [keyAlias, key] of keys) {
       if (key.privateKeyHex.includes(alias)) {
-        console.log(
+        this.logger?.info(
           `Found key ${keyAlias} containing ${alias} in its material`,
         );
         delete data.keys[keyAlias];
         this.saveData(data);
-        console.log(`Successfully deleted key with alias: ${keyAlias}`);
+        this.logger?.debug(`Successfully deleted key with alias: ${keyAlias}`);
         return true;
       }
     }
 
-    console.log(`No key found with alias: ${alias}`);
+    this.logger?.debug(`No key found with alias: ${alias}`);
     return false;
   }
 
@@ -118,7 +123,20 @@ export class FilePrivateKeyStore extends AbstractPrivateKeyStore {
     }
   }
 
-  private saveData(data: { keys: Record<string, ManagedPrivateKey> }) {
-    fs.writeFileSync(this.filePath, JSON.stringify(data, null, 2));
-  }
+ 
+    private saveData(data: { keys: Record<string, ManagedPrivateKey> }) {
+ 
+     try {
+         fs.writeFileSync(this.filePath, JSON.stringify(data, null, 2));
+         } catch (error: unknown) {
+           this.logger?.error(`Error saving Key data: ${error instanceof Error ? error.message : String(error)}`);
+            throw new VError(
+             { 
+               name: "FileKeyStoreError", 
+               cause: error instanceof Error ? error : undefined, 
+             },
+             `Failed to save Key data to file: ${this.filePath}`,
+           );
+         }
+    }
 }

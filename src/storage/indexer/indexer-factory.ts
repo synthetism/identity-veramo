@@ -2,6 +2,7 @@ import type { IFileSystem } from "../filesystem/filesystem.interface";
 import type { IFileIndexer } from "./file-indexer.interface";
 import type { Logger } from "@synet/logger";
 import { FileIndexer } from "./file-indexer";
+
 /**
  * Create an IDL indexer with file system persistence
  */

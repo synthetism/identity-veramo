@@ -344,7 +344,7 @@ export class IdentityService {
     }
   }
 
-  public test() {
+  public welcome() {
     this.logInfo("IdentityService is working!");
   }
 
