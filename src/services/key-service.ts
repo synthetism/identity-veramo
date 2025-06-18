@@ -32,7 +32,7 @@ export class KeyService implements IKeyService {
 
   async create(type: TKeyType, meta?: KeyMetadata): Promise<Result<IKey>> {
     try {
-      this.logger?.info(`Creating key of type ${type}`);
+      this.logger?.debug(`Creating key of type ${type}`);
 
       const keyData = await this.agent.keyManagerCreate({
         kms: "local",
@@ -43,7 +43,8 @@ export class KeyService implements IKeyService {
         },
       });
 
-      this.logger?.info(`Created key: ${keyData.kid}`);
+      this.logger?.debug(`Created key: ${keyData.kid}`);
+
       return Result.success(keyData);
     } catch (error) {
       this.logger?.error(`Failed to create key: ${error}`);
@@ -56,7 +57,7 @@ export class KeyService implements IKeyService {
 
   async get(kid: string): Promise<Result<IKey>> {
     try {
-      this.logger?.info(`Getting key with ID: ${kid}`);
+      this.logger?.debug(`Getting key with ID: ${kid}`);
       const key = await this.agent.keyManagerGet({ kid });
       return Result.success(key);
     } catch (error) {
@@ -67,7 +68,7 @@ export class KeyService implements IKeyService {
 
   async delete(kid: string): Promise<Result<boolean>> {
     try {
-      this.logger?.info(`Deleting key: ${kid}`);
+      this.logger?.debug(`Deleting key: ${kid}`);
       await this.agent.keyManagerDelete({ kid });
       return Result.success(true);
     } catch (error) {

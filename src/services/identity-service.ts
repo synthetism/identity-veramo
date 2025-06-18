@@ -35,7 +35,7 @@ export class IdentityService {
     meta?: KeyMetadata,
   ): Promise<Result<IndexEntry>> {
     try {
-      this.logInfo(`Creating identity with alias "${alias}"...`);
+      this.logger?.debug(`Creating identity with alias "${alias}"...`);
 
       // First, validate alias is available
       if (this.indexer.aliasExists(alias)) {
@@ -89,12 +89,12 @@ export class IdentityService {
 
       this.indexer.create(entry);
 
-      this.logInfo(
+      this.logger?.info(
         `Successfully created identity "${alias}" with DID ${did.did}`,
       );
       return Result.success(entry);
     } catch (error) {
-      this.logError(`Failed to create identity: ${error}`);
+      this.logger?.error(`Failed to create identity: ${error}`);
       return Result.fail(
         `Failed to create identity: ${error}`,
         error instanceof Error ? error : new Error(String(error)),
@@ -107,7 +107,7 @@ export class IdentityService {
    */
   async deleteIdentity(aliasOrDid: string): Promise<Result<void>> {
     try {
-      this.logInfo(`Deleting identity with alias or DID "${aliasOrDid}"...`);
+      this.logger?.debug(`Deleting identity with alias or DID "${aliasOrDid}"...`);
 
       // 1. Find the identity
       const entryResult = this.getIdentity(aliasOrDid);
@@ -121,7 +121,7 @@ export class IdentityService {
       // 2. Delete DID
       const didResult = await this.didStore.delete(entry.did);
       if (!didResult.isSuccess) {
-        this.logError(
+        this.logger?.error(
           `Failed to delete DID ${entry.did}: ${didResult.errorMessage}`,
         );
         // Continue with deletion attempts even if DID deletion fails
@@ -130,7 +130,7 @@ export class IdentityService {
       // 3. Delete key
       const keyResult = await this.keyStore.delete(entry.kid);
       if (!keyResult.isSuccess) {
-        this.logError(
+        this.logger?.error(
           `Failed to delete key ${entry.kid}: ${keyResult.errorMessage}`,
         );
         // Continue with deletion attempts even if key deletion fails
@@ -139,10 +139,11 @@ export class IdentityService {
       // 4. Delete index entry
       this.indexer.delete(entry.alias);
 
-      this.logInfo(`Successfully deleted identity "${entry.alias}"`);
+      this.logger?.info(`Successfully deleted identity "${entry.alias}"`);
+
       return Result.success(undefined);
     } catch (error) {
-      this.logError(`Failed to delete identity: ${error}`);
+      this.logger?.error(`Failed to delete identity: ${error}`);
       return Result.fail(
         `Failed to delete identity: ${error}`,
         error instanceof Error ? error : new Error(String(error)),
@@ -158,7 +159,7 @@ export class IdentityService {
       const entries = this.indexer.list();
       return Result.success(entries);
     } catch (error) {
-      this.logError(`Failed to list identities: ${error}`);
+      this.logger?.error(`Failed to list identities: ${error}`);
       return Result.fail(
         `Failed to list identities: ${error}`,
         error instanceof Error ? error : new Error(String(error)),
@@ -171,11 +172,11 @@ export class IdentityService {
    */
   getIdentity(aliasOrDid: string): Result<IndexEntry | null> {
     try {
-      this.logInfo(`Getting identity with alias or DID "${aliasOrDid}"...`);
+      this.logger?.debug(`Getting identity with alias or DID "${aliasOrDid}"...`);
       const entry = this.indexer.get(aliasOrDid);
       return Result.success(entry);
     } catch (error) {
-      this.logError(`Failed to get identity: ${error}`);
+      this.logger?.error(`Failed to get identity: ${error}`);
       return Result.fail(
         `Failed to get identity: ${error}`,
         error instanceof Error ? error : new Error(String(error)),
@@ -191,7 +192,7 @@ export class IdentityService {
     newAlias: string,
   ): Promise<Result<IndexEntry>> {
     try {
-      this.logInfo(
+      this.logger?.debug(
         `Renaming identity from "${currentAlias}" to "${newAlias}"...`,
       );
 
@@ -232,12 +233,12 @@ export class IdentityService {
       };
       this.indexer.create(newEntry);
 
-      this.logInfo(
+      this.logger?.info(
         `Successfully renamed identity from "${currentAlias}" to "${newAlias}"`,
       );
       return Result.success(newEntry);
     } catch (error) {
-      this.logError(`Failed to rename identity: ${error}`);
+      this.logger?.error(`Failed to rename identity: ${error}`);
       return Result.fail(
         `Failed to rename identity: ${error}`,
         error instanceof Error ? error : new Error(String(error)),
@@ -252,7 +253,7 @@ export class IdentityService {
     aliasOrDid: string,
   ): Promise<Result<{ entry: IndexEntry; did: IIdentifier; keys: IKey[] }>> {
     try {
-      this.logInfo(
+      this.logger?.debug(
         `Getting detailed information for identity "${aliasOrDid}"...`,
       );
 
@@ -295,7 +296,7 @@ export class IdentityService {
 
       return Result.success(details);
     } catch (error) {
-      this.logError(`Failed to get identity details: ${error}`);
+      this.logger?.error(`Failed to get identity details: ${error}`);
       return Result.fail(
         `Failed to get identity details: ${error}`,
         error instanceof Error ? error : new Error(String(error)),
@@ -344,15 +345,5 @@ export class IdentityService {
     }
   }
 
-  public welcome() {
-    this.logInfo("IdentityService is working!");
-  }
 
-  private logInfo(message: string): void {
-    this.logger?.info(message);
-  }
-
-  private logError(message: string, error?: unknown): void {
-    this.logger?.error(message, error);
-  }
 }
