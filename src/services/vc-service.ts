@@ -5,27 +5,29 @@ import type {
   TAgent,
   ICredentialPlugin,
 } from "@veramo/core";
+import { createId } from '@paralleldrive/cuid2'
 import { Result } from "@synet/patterns";
 import type { Logger } from "@synet/logger";
 import { v4 as uuidv4 } from "uuid";
-import type { IStorage } from "../storage/patterns/storage/promises";
+import type { IVCStore } from "../storage/vcs/vc-store.interface";
+import type { SynetVerifiableCredential } from "../types/credential";
 
 export interface VCServiceOptions {
   defaultIssuerDid?: string;
 }
 
-export interface IVCService {
-  issueVC(
-    subject: Record<string, unknown>,
+export interface IVCService<T = unknown> {
+  issueVC<S extends Record<string, unknown>>(
+    subject: S,
     type: string[],
     issuerDid?: string,
-  ): Promise<Result<W3CVerifiableCredential>>;
+  ): Promise<Result<T>>;
 
-  verifyVC(vc: W3CVerifiableCredential): Promise<Result<boolean>>;
+  verifyVC(vc: T): Promise<Result<boolean>>;
 
-  getVC(id: string): Promise<Result<W3CVerifiableCredential | null>>;
+  getVC(id: string): Promise<Result<T | null>>;
 
-  listVCs(): Promise<Result<W3CVerifiableCredential[]>>;
+  listVCs(): Promise<Result<T[]>>;
 
   deleteVC(id: string): Promise<Result<boolean>>;
 }
@@ -33,15 +35,21 @@ export interface IVCService {
 /**
  * Service for managing Verifiable Credentials
  */
-export class VCService implements IVCService {
+export class VCService<SynetVerifiableCredential> implements IVCService {
   constructor(
     private readonly agent: TAgent<
       IKeyManager & IDIDManager & ICredentialPlugin
     >,
-    private readonly storage?: IStorage<W3CVerifiableCredential>,
+    private readonly storage?: IVCStore<SynetVerifiableCredential>,
     private readonly options: VCServiceOptions = {},
     private readonly logger?: Logger,
   ) {}
+
+  generateVCId = (type: string): string => {
+    const cuid = createId(); // optionally pass config
+
+    return `urn:synet:${type}:${cuid}`;
+  }
 
   /**
    * Issue a new verifiable credential
@@ -50,12 +58,27 @@ export class VCService implements IVCService {
    * @param issuerDid Optional issuer DID (uses default if not provided)
    * @returns Result containing the issued credential
    */
-  async issueVC(
-    subject: Record<string, unknown>,
-    type: string[],
+  async issueVC<S extends Record<string, unknown>>(
+    subject: S,
+    type: string | string[],
     issuerDid?: string,
-  ): Promise<Result<W3CVerifiableCredential>> {
+    options?: {
+      vcId?: string; // Optional ID for the credential
+      context?: string[];
+      issuanceDate?: string;
+      expirationDate?: string;
+    }
+  ): Promise<Result<SynetVerifiableCredential>> {
     try {
+
+      const defaultContext= ['https://www.w3.org/2018/credentials/v1'];
+      
+      if(options?.context) {
+        const contextArray = Array.isArray(options.context) ? options.context : [options.context];
+        defaultContext.push(...contextArray);
+      }
+      const context = options?.context || defaultContext;
+    
       // Use provided issuer or default
       const effectiveIssuerDid = issuerDid || this.options.defaultIssuerDid;
 
@@ -80,30 +103,37 @@ export class VCService implements IVCService {
       }
 
       // Generate a unique ID for the credential
-      const vcId = `urn:uuid:${uuidv4()}`;
+      const typeArray = Array.isArray(type) ? type : [type];
+      const appType = typeArray.find(t => t !== "VerifiableCredential") || "Generic";
+      const vcId = options?.vcId || this.generateVCId(appType);
+
 
       try {
         // Create the credential
         const vc = (await this.agent.createVerifiableCredential({
           credential: {
+             id: vcId,
+            '@context': context,
             issuer: { id: effectiveIssuerDid },
-            type: ["VerifiableCredential", ...type],
-            issuanceDate: new Date().toISOString(),
+            type: ["VerifiableCredential", ...typeArray],
+            issuanceDate: options?.issuanceDate || new Date().toISOString(),
+            expirationDate: options?.expirationDate,
             credentialSubject: subject,
-            id: vcId,
+       
           },
           proofFormat: "jwt",
-        })) as W3CVerifiableCredential;
+        })) as SynetVerifiableCredential;
 
         // Store the credential if storage is configured
         if (this.storage) {
           await this.storage.create(vcId, vc);
         }
 
-        this.logger?.info(
-          `Issued credential ${vcId} with types [${type.join(", ")}]`,
+        this.logger?.debug(
+          `Issued credential ${vcId} with types [${typeArray.join(", ")}]`,
         );
         return Result.success(vc);
+        
       } catch (error) {
         return Result.fail(
           `Error creating verifiable credential: ${error instanceof Error ? error.message : String(error)}`,
@@ -147,7 +177,7 @@ export class VCService implements IVCService {
    * @param id Credential ID
    * @returns Result with the credential or null if not found
    */
-  async getVC(id: string): Promise<Result<W3CVerifiableCredential | null>> {
+  async getVC(id: string): Promise<Result<SynetVerifiableCredential | null>> {
     if (!this.storage) {
       return Result.fail("Storage not configured for VC service");
     }
@@ -167,7 +197,7 @@ export class VCService implements IVCService {
    * List all stored credentials
    * @returns Result with array of credentials
    */
-  async listVCs(): Promise<Result<W3CVerifiableCredential[]>> {
+  async listVCs(): Promise<Result<SynetVerifiableCredential[]>> {
     if (!this.storage) {
       return Result.fail("Storage not configured for VC service");
     }

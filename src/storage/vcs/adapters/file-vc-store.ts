@@ -1,24 +1,10 @@
-import type { W3CVerifiableCredential } from "@veramo/core";
-import type { IStorage } from "../../patterns/storage/promises";
 import type { IFileSystem } from "../../filesystem/filesystem.interface";
 import VError  from "verror";
 import type { Logger } from "@synet/logger";
 import path from "node:path";
+import type { IVCStore } from "../vc-store.interface";
 
-export interface IFileVCStore extends IStorage<W3CVerifiableCredential> {
-  /**
-   * File-based Verifiable Credential store implementation
-   * @param dir Directory to store VC files
-   * @param fs File system interface for file operations
-   */
-  exists(id: string): Promise<boolean>;
-  create(id: string, item: W3CVerifiableCredential): Promise<void>;
-  get(id: string): Promise<W3CVerifiableCredential | null>;
-  delete(id: string): Promise<boolean>;
-  list(): Promise<W3CVerifiableCredential[]>;
-}
-
-export class FileVCStore implements IFileVCStore {
+export class FileVCStore<T> implements IVCStore<T> {
   constructor(
     private readonly dir: string,
     private readonly fs: IFileSystem,
@@ -44,7 +30,7 @@ export class FileVCStore implements IFileVCStore {
     }
   }
 
-  async create(id: string, item: W3CVerifiableCredential): Promise<void> {
+  async create(id: string, item: T): Promise<void> {
     try {
       
       const filePath = this.resolvePath(id);
@@ -61,7 +47,7 @@ export class FileVCStore implements IFileVCStore {
     }
   }
 
-  async get(id: string): Promise<W3CVerifiableCredential | null> {
+  async get(id: string): Promise<T | null> {
 
     try {
     const filePath = this.resolvePath(id);
@@ -97,10 +83,10 @@ export class FileVCStore implements IFileVCStore {
     }
   }
 
-  async list(): Promise<W3CVerifiableCredential[]> {
+  async list(): Promise<T[]> {
     try {
     const files = await this.fs.readDir(this.dir);
-    const vcs: W3CVerifiableCredential[] = [];
+    const vcs: T[] = [];
     for (const file of files) {
       const content = await this.fs.readFile(path.join(this.dir, file));
       vcs.push(JSON.parse(content.toString()));

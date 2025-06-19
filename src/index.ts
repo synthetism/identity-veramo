@@ -17,8 +17,6 @@ import { getNullLogger, type Logger } from "@synet/logger";
 
 /* Storage */
 
-import type { IFileSystem } from "./storage/filesystem/filesystem.interface";
-import type { IStorage } from "./storage/patterns/storage/promises";
 import { createIndexer } from "./storage/indexer/indexer-factory";
 import { NodeFileSystem } from "./storage/filesystem/filesystem";
 import { MemFileSystem } from "./storage/filesystem/memory";
@@ -41,27 +39,16 @@ import {
 
 import path from "node:path";
 import os from "node:os";
-
-import type { IFileIndexer } from "./storage/indexer/file-indexer.interface";
-
 import { createStorageAdapters, type StorageAdapters } from "./storage/adapters/adapter-factory";
-
-
-// Export domain entities, interfaces and common utilities
-
-export * from "./storage/filesystem/filesystem.interface";
-export * from "./storage/indexer/file-indexer.interface";
+import { createVCStore } from "./storage/vcs/vc-store-factory";
 
 // Export file system implementations
-export * from "./storage/filesystem/filesystem";
-export * from "./storage/filesystem/memory";
 export * from "./services/vc-service";
 
-export type { IIdentifier, IKey, DIDDocument } from "@veramo/core";
+export type { IIdentifier, IKey, DIDDocument, W3CVerifiableCredential, VerifiableCredential, IssuerType } from "@veramo/core";
 
 export enum StorageType {
   FILE = "file",
-  MEMORY = "memory",
   ENCRYPTED = "encrypted", // Future: Implement encrypted storage
   CLOUD = "cloud",
 }
@@ -102,13 +89,13 @@ export function createIdentityService(
 }
 
 // Add a standalone function to create just the VC service
-export function createVCService(
+export function createVCService<T extends W3CVerifiableCredential>(
   options: VCServiceOptions & { storeDir?: string } = {},
   logger?: Logger,
-): VCService {
+): VCService<T> {
   const effectiveLogger = logger || getNullLogger();
   const storeDir =
-    options.storeDir || path.join(os.homedir(), ".synet", "identity");
+    options.storeDir || path.join(os.homedir(), ".synet", "credentials");
       
   const filesystem = new NodeFileSystem();
 
@@ -119,8 +106,12 @@ export function createVCService(
   });
   
   const agent = createAgentWithKMS(adapters);
-
-  return new VCService(agent, adapters.vcStore, options, effectiveLogger);
+  const vcStore = createVCStore<T>({
+    storeDir,
+    filesystem,
+    logger: effectiveLogger
+  });
+  return new VCService<T>(agent, vcStore, options, effectiveLogger);
 }
 
 function createAgentWithKMS(

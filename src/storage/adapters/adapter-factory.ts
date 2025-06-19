@@ -4,7 +4,6 @@ import {
   FileKeyStore, 
   FilePrivateKeyStore, 
   FileDIDStore, 
-  FileVCStore 
 } from "./file";
 import path from "node:path";
 
@@ -13,7 +12,6 @@ export interface StorageAdapters {
   keyStore: FileKeyStore;
   privateKeyStore: FilePrivateKeyStore;
   didStore: FileDIDStore;
-  vcStore: FileVCStore;
 }
 
 // Options for adapter creation
@@ -36,16 +34,12 @@ export function createStorageAdapters(options: AdapterFactoryOptions): StorageAd
   const keyStorePath = path.join(storeDir, "keystore.json");
   const privateKeyStorePath = path.join(storeDir, "private-keystore.json");
   const didStorePath = path.join(storeDir, "didstore.json");
-  const vcStoreDir = path.join(storeDir, "credentials");
-  
-  // Ensure VC directory exists
-  filesystem.ensureDirSync(vcStoreDir);
-  
+
   // Create all adapters
   return {
     keyStore: new FileKeyStore(keyStorePath, logger),
     privateKeyStore: new FilePrivateKeyStore(privateKeyStorePath, logger),
     didStore: new FileDIDStore(didStorePath, logger),
-    vcStore: new FileVCStore(vcStoreDir, filesystem, logger)
+
   };
 }

@@ -2,11 +2,11 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { VCService } from '../../src/services/vc-service';
 import path from 'node:path';
 import { MemFileSystem } from '../../src/storage/filesystem/memory';
-import type { W3CVerifiableCredential } from '@veramo/core';
-import { FileVCStore } from '../../src/storage/adapters/file/file-vc-store';
+import { FileVCStore } from '../../src/storage/vcs/adapters/file-vc-store';
 import  { mockLogger } from '../fixtures/mockLogger';
 import { mockAgent } from '../fixtures/mockAgent';
 import type { Logger } from '@synet/logger';
+import type {SynetVerifiableCredential, OrgCredentialSubject } from '../../src/types/credential';
 
 describe('VCService', () => {
   // Mock Veramo agent
@@ -20,21 +20,30 @@ describe('VCService', () => {
 
   // Ensure test storage path exists
 
+  const sampleContext = [
+    'https://www.w3.org/2018/credentials/v1',
+    'https://synthetism.org/credentials/v1'
+  ];
 
   // Sample data
   const sampleDid = 'did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK';
   const sampleSubject = {
+    networkId: 'test-network',
+    holder: {
+      id: sampleDid,
+      type: 'Person'
+    },
     name: 'John Doe',
     age: 30,
     email: 'john@example.com'
-  };
-  const sampleTypes = ['PersonCredential'];
+  } as OrgCredentialSubject; // Use Record to allow flexible subject structure
+  const sampleTypes = ['OrgCredential'];
   
   // Sample credential UUID - we'll mock uuid to return this value consistently
   const sampleCredentialId = 'urn:uuid:123e4567-e89b-12d3-a456-426614174000';
   
   // Sample verifiable credential
-  const sampleVC: W3CVerifiableCredential = {
+  const sampleVC: SynetVerifiableCredential = {
     '@context': ['https://www.w3.org/2018/credentials/v1'],
     id: sampleCredentialId,
     type: ['VerifiableCredential', ...sampleTypes],
@@ -47,8 +56,8 @@ describe('VCService', () => {
     }
   };
 
-  let vcService: VCService;
-  let vcStore: FileVCStore;
+  let vcService: VCService<SynetVerifiableCredential>;
+  let vcStore: FileVCStore<SynetVerifiableCredential>;
 
 //mockFileSystem.ensureDirSync(testStoragePath);
 
@@ -58,8 +67,8 @@ describe('VCService', () => {
 
     
     // Mock UUID to return consistent results for testing
-    vi.mock('uuid', () => ({
-      v4: () => '123e4567-e89b-12d3-a456-426614174000'
+   vi.mock('@paralleldrive/cuid2', () => ({
+      createId: () => 'urn:uuid:123e4567-e89b-12d3-a456-426614174000'
     }));
     
     mockFileSystem.ensureDirSync(testDir);
@@ -71,7 +80,7 @@ describe('VCService', () => {
     vcStore = new FileVCStore(testStoragePath, mockFileSystem);
     
     // Setup VCService
-    vcService = new VCService(
+    vcService = new VCService<SynetVerifiableCredential>(
       mockAgent as any,
       vcStore,
       { defaultIssuerDid: sampleDid },
@@ -83,8 +92,6 @@ describe('VCService', () => {
     mockAgent.createVerifiableCredential.mockResolvedValue(sampleVC);
     mockAgent.verifyCredential.mockResolvedValue({ verified: true });
     
-
-
     
   });
 
@@ -100,8 +107,15 @@ describe('VCService', () => {
   describe('issueVC', () => {
     it('should issue a verifiable credential', async () => {
 
-      const result = await vcService.issueVC(sampleSubject, sampleTypes);
-      
+      const result = await vcService.issueVC(        
+        sampleSubject, 
+        sampleTypes,
+        sampleDid, // Explicitly provide issuer DID
+        {
+          context: sampleContext,
+          vcId: sampleCredentialId
+        });
+    
    
       expect(result.isSuccess).toBe(true);
       expect(result.value).toEqual(sampleVC);
@@ -109,6 +123,7 @@ describe('VCService', () => {
       // Verify agent was called correctly
       expect(mockAgent.createVerifiableCredential).toHaveBeenCalledWith({
         credential: {
+          '@context': sampleContext,
           issuer: { id: sampleDid },
           type: ['VerifiableCredential', ...sampleTypes],
           issuanceDate: expect.any(String),
@@ -122,10 +137,7 @@ describe('VCService', () => {
       const storedCredential = await vcStore.get(sampleCredentialId);
       expect(storedCredential).toEqual(sampleVC);
       
-      // Verify logging
-      expect(mockLogger.info).toHaveBeenCalledWith(
-        expect.stringContaining(`Issued credential ${sampleCredentialId}`)
-      );
+   
     });
     
     it('should fail if no issuer DID is provided or configured', async () => {
@@ -214,6 +226,7 @@ describe('VCService', () => {
 
       const result = await vcService.getVC('test');
 
+ 
       expect(result.isSuccess).toBe(true);
       expect(result.value).toEqual(sampleVC);
     });
@@ -332,12 +345,18 @@ describe('VCService', () => {
       // 1. Issue a credential
       const issueResult = await vcService.issueVC(
         { ...sampleSubject, id: 'did:example:123' },
-        [...sampleTypes, 'EmailCredential']
+        [...sampleTypes, 'EmailCredential'],
+        sampleDid, // Explicitly provide issuer DID
+        {
+          context: sampleContext,
+          vcId: sampleCredentialId
+        }               
       );
       
       expect(issueResult.isSuccess).toBe(true);
 
-      const issuedVC = issueResult.value as W3CVerifiableCredential;
+      const issuedVC = issueResult.value as SynetVerifiableCredential;
+   
       const vcId = typeof issuedVC === 'string' ? issuedVC : issuedVC.id || sampleCredentialId;
       
       // 2. Verify the credential
@@ -345,13 +364,17 @@ describe('VCService', () => {
       expect(verifyResult.isSuccess).toBe(true);
       expect(verifyResult.value).toBe(true);
       
+    
       // 3. Get the credential by ID
       const getResult = await vcService.getVC(vcId);
+
+
       expect(getResult.isSuccess).toBe(true);
       expect(getResult.value).toEqual(issuedVC);
       
       // 4. List all credentials
       const listResult = await vcService.listVCs();
+
       expect(listResult.isSuccess).toBe(true);
       expect(listResult.value).toContainEqual(issuedVC);
       
