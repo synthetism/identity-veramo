@@ -1,13 +1,13 @@
 import path from "node:path";
-import type { IndexEntry, IndexRecord } from "./types";
-import type { IIndexer } from "@synet/patterns/storage";
-import type { IFileSystem } from "../filesystem/filesystem.interface";
+import type { IndexEntry, IndexRecord } from "../types";
+import type { IFileVCIndexer } from "../file-vc-indexer.interface";
+import type { IFileSystem } from "../../filesystem/filesystem.interface";
 import type { Logger } from "@synet/logger";
 
 /**
- * File-based implementation of the IDL indexer
+ * File-based implementation of the VC indexer
  */
-export class FileIndexer implements IIndexer<IndexEntry> {
+export class FileVCIndexer implements IFileVCIndexer {
   private indexPath: string;
   private index: IndexRecord | null = null;
 
@@ -29,7 +29,7 @@ export class FileIndexer implements IIndexer<IndexEntry> {
     const index = this.loadIndex();
     return (
       Object.values(index).find(
-        (entry) => entry.alias === keyword || entry.did === keyword,
+        (entry) => entry.alias === keyword || entry.id === keyword,
       ) || null
     );
   }
@@ -39,12 +39,12 @@ export class FileIndexer implements IIndexer<IndexEntry> {
     return index[alias] || null;
   }
 
-  findById(did: string): IndexEntry | null {
+  findById(id: string): IndexEntry | null {
     const index = this.loadIndex();
 
-    // Find entry by DID
+    // Find entry by ID
     for (const alias in index) {
-      if (index[alias].did === did) {
+      if (index[alias].id === id) {
         return index[alias];
       }
     }
@@ -56,13 +56,13 @@ export class FileIndexer implements IIndexer<IndexEntry> {
     return this.findByAlias(alias) !== null;
   }
 
-  get(aliasOrDid: string): IndexEntry | null {
+  get(aliasOrId: string): IndexEntry | null {
     // First try as alias
-    const byAlias = this.findByAlias(aliasOrDid);
+    const byAlias = this.findByAlias(aliasOrId);
     if (byAlias) return byAlias;
 
-    // Then try as DID
-    return this.findById(aliasOrDid);
+    // Then try as ID
+    return this.findById(aliasOrId);
   }
 
   create(entry: IndexEntry): void {
@@ -76,7 +76,7 @@ export class FileIndexer implements IIndexer<IndexEntry> {
 
     this.saveIndex(index);
     this.logger?.debug(
-      `Added/updated index entry for "${entry.alias}" (${entry.did})`,
+      `Added index entry for "${entry.alias}" (${entry.id})`,
     );
   }
 
@@ -102,24 +102,29 @@ export class FileIndexer implements IIndexer<IndexEntry> {
     const newIndex: Record<string, IndexEntry> = {};
 
     for (const entry of entries) {
-      if (entry.alias && entry.did) {
+      if (entry.alias && entry.id) {
         newIndex[entry.alias] = {
           ...entry,
           createdAt: entry.createdAt || new Date().toISOString(),
         };
       } else {
-        this.logger?.warn("Invalid DID entry: missing alias or did");
+        this.logger?.warn("Invalid entry: missing alias or id");
       }
     }
 
     this.saveIndex(newIndex);
-
+    this.logger?.info(`Rebuilt index with ${entries.length} entries`);
   }
 
   private ensureIndexDirectory(): void {
-    const indexDir = path.dirname(this.indexPath);
-    if (!this.filesystem.existsSync(indexDir)) {
-      this.filesystem.ensureDir(indexDir);
+    try {
+      const indexDir = path.dirname(this.indexPath);
+      if (!this.filesystem.existsSync(indexDir)) {
+        this.filesystem.ensureDir(indexDir);
+      }
+    } catch (error) {
+      this.logger?.error("Error ensuring index directory:", error);
+      throw new Error(`Failed to create index directory: ${error}`);
     }
   }
 
@@ -138,14 +143,13 @@ export class FileIndexer implements IIndexer<IndexEntry> {
 
       // Handle potential version or structure differences here
       // but return a consistent IndexRecord format
-
       if (parsed.entries) {
         // New format with version
         this.index = parsed.entries;
-      } else if (Array.isArray(parsed.dids)) {
+      } else if (Array.isArray(parsed.vcs)) {
         // Migration from old array format
         const entries: IndexRecord = {};
-        for (const entry of parsed.dids) {
+        for (const entry of parsed.vcs) {
           entries[entry.alias] = entry;
         }
         this.index = entries;
@@ -159,30 +163,27 @@ export class FileIndexer implements IIndexer<IndexEntry> {
 
       return this.index || {};
     } catch (error) {
-      this.logger?.error("Error loading identity index:", error);
+      this.logger?.error("Error loading VC index:", error);
       return {};
     }
   }
 
   private saveIndex(indexRecord: IndexRecord): void {
-    // You can decide to save with or without version info
-    // Option 1: Just save the record directly (simplest)
-    /* this.filesystem.writeFile(
-      this.indexPath, 
-      JSON.stringify(indexRecord, null, 2)
-    ); */
+    try {
+      const withVersion = {
+        entries: indexRecord,
+        version: "1.0.0",
+      };
+      
+      this.filesystem.writeFile(
+        this.indexPath,
+        JSON.stringify(withVersion, null, 2),
+      );
 
-    // Option 2: Include version info if you want
-
-    const withVersion = {
-      entries: indexRecord,
-      version: "1.0.0",
-    };
-    this.filesystem.writeFile(
-      this.indexPath,
-      JSON.stringify(withVersion, null, 2),
-    );
-
-    this.index = indexRecord;
+      this.index = indexRecord;
+    } catch (error) {
+      this.logger?.error("Error saving VC index:", error);
+      throw new Error(`Failed to save index: ${error}`);
+    }
   }
 }

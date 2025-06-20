@@ -36,6 +36,8 @@ export class FileVCStore<T> implements IVCStore<T> {
       const filePath = this.resolvePath(id);
       await this.fs.writeFile(filePath, JSON.stringify(item, null, 2));
 
+      this.logger?.debug(`Saving VC with id: ${id} to file: ${filePath}`);
+      
     } catch (error: unknown) {
       throw new VError(
         {

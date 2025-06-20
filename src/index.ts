@@ -13,7 +13,7 @@ import { DIDManager } from "@veramo/did-manager";
 import { KeyDIDProvider } from "@veramo/did-provider-key";
 import { CredentialPlugin } from "@veramo/credential-w3c";
 import { getNullLogger, type Logger } from "@synet/logger";
-
+import type { SynetVerifiableCredential } from "./types/credential";
 
 /* Storage */
 
@@ -40,7 +40,7 @@ import {
 import path from "node:path";
 import os from "node:os";
 import { createStorageAdapters, type StorageAdapters } from "./storage/adapters/adapter-factory";
-import { createVCStore } from "./storage/vcs/vc-store-factory";
+import { createVCStore, createVCIndexer } from "./storage/vcs/vc-store-factory";
 
 // Export file system implementations
 export * from "./services/vc-service";
@@ -52,7 +52,7 @@ export enum StorageType {
   ENCRYPTED = "encrypted", // Future: Implement encrypted storage
   CLOUD = "cloud",
 }
-
+export type {IdentityService,  VCService};
 /**
  * Create an identity service with the specified storage type
  */
@@ -66,7 +66,7 @@ export function createIdentityService(
    options.storeDir || path.join(os.homedir(), ".synet", "identity");
 
    const filesystem = new NodeFileSystem();
-   const idIndexer = createIndexer(storeDir, filesystem, logger);
+   const idIndexer = createIndexer(storeDir, 'identity', filesystem, logger);
 
    const adapters = createStorageAdapters({
      storeDir,
@@ -89,13 +89,13 @@ export function createIdentityService(
 }
 
 // Add a standalone function to create just the VC service
-export function createVCService<T extends W3CVerifiableCredential>(
+export function createVCService<T extends SynetVerifiableCredential>(
   options: VCServiceOptions & { storeDir?: string } = {},
   logger?: Logger,
 ): VCService<T> {
   const effectiveLogger = logger || getNullLogger();
   const storeDir =
-    options.storeDir || path.join(os.homedir(), ".synet", "credentials");
+    options.storeDir || path.join(os.homedir(), ".synet", "vcs");
       
   const filesystem = new NodeFileSystem();
 
@@ -111,7 +111,14 @@ export function createVCService<T extends W3CVerifiableCredential>(
     filesystem,
     logger: effectiveLogger
   });
-  return new VCService<T>(agent, vcStore, options, effectiveLogger);
+
+  const vcIndexer = createVCIndexer({
+    storeDir,
+    filesystem,
+    logger: effectiveLogger
+  });
+
+  return new VCService<T>(agent, vcIndexer, vcStore, options, effectiveLogger);
 }
 
 function createAgentWithKMS(

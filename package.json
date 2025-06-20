@@ -41,7 +41,7 @@
   "dependencies": {
     "@paralleldrive/cuid2": "^2.2.2",
     "@synet/logger": "^0.1.3",
-    "@synet/patterns": "^2.1.1",
+    "@synet/patterns": "^2.1.2",
     "@veramo/core": "^6.0.0",
     "@veramo/credential-w3c": "^6.0.0",
     "@veramo/data-store": "^6.0.0",

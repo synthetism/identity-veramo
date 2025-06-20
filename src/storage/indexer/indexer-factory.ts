@@ -8,8 +8,9 @@ import { FileIndexer } from "./file-indexer";
  */
 export function createIndexer(
   storeDir: string,
+  indexName: string,
   filesystem: IFileSystem,
   logger?: Logger,
 ): IFileIndexer {
-  return new FileIndexer(storeDir, filesystem, logger);
+  return new FileIndexer(storeDir, indexName, filesystem, logger);
 }

@@ -31,12 +31,14 @@ export interface SynetHolder {
 }
 
 export interface BaseCredentialSubject {
-  networkId: string
-  [key: string]: unknown
+  holder: SynetHolder;
+  networkId: string;
+  [key: string]: unknown;
 }
 
+
 export interface RootCredentialSubject extends BaseCredentialSubject {
-  holder: SynetHolder;  // Who holds this pool
+ 
   poolCidr: string;   // The IP range operated by root
   role?: string;  // Optional role of root - admin, operator, etc.
   url?: string;  // Optional URL for more info
@@ -51,7 +53,7 @@ export interface ServiceCredentialSubject extends BaseCredentialSubject {
 }
 
 export interface GatewayCredentialSubject extends BaseCredentialSubject {
-  holder: SynetHolder
+
   regionId?: string
   cidr?: string
   ip?: string
@@ -61,13 +63,13 @@ export interface GatewayCredentialSubject extends BaseCredentialSubject {
 
 // Authorization 
 export interface OrgAuthorizationSubject extends BaseCredentialSubject {
-  holder: SynetHolder       // The org
+
   authorizedBy: SynetHolder // Root or verifier
   scope?: string // e.g. "network-participation" or "kyc-level-3"
 }
 
 export interface GatewayAuthorizationSubject extends BaseCredentialSubject {
-  holder: SynetHolder
+
   regionId: string
   authorizedBy: SynetHolder
   ip: string
@@ -78,14 +80,14 @@ export interface GatewayAuthorizationSubject extends BaseCredentialSubject {
 
 // IP Resources
 export interface IpPoolAssetSubject extends BaseCredentialSubject {
-  holder: SynetHolder
+
   cidr: string
   regionId: string
   orgAuthorizationId?: string // optional, for traceability
 }
 
 export interface IpAssetSubject extends BaseCredentialSubject {
-  holder: SynetHolder
+
   ip: string
   ipPoolId?: string
 }
@@ -93,7 +95,7 @@ export interface IpAssetSubject extends BaseCredentialSubject {
 // Governance
 
 export interface RootPolicySubject extends BaseCredentialSubject {
-  holder: SynetHolder
+  
   policyId: string
   version: string
   url?: string

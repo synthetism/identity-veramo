@@ -5,7 +5,7 @@ import type { IndexEntry } from "./types";
  * Interface for IDL indexer operations
  * Provides lookup between alias, DID, and key references
  */
-export interface IFileIndexer extends IIndexer<IndexEntry> {
+export interface IFileVCIndexer extends IIndexer<IndexEntry> {
   /**
    * Check if the index exists
    */

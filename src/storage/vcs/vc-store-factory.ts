@@ -3,13 +3,13 @@ import type { IFileSystem } from "../filesystem/filesystem.interface";
 
 import type { IVCStore } from "./vc-store.interface";
 import {FileVCStore} from "./adapters/file-vc-store";
-import type { SynetVerifiableCredential } from "../../types/credential";
-
+import { FileVCIndexer } from "./adapters/file-vc-indexer";
 export interface AdapterFactoryOptions {
   storeDir: string;
   filesystem: IFileSystem;
   logger?: Logger;
 }
+
 
 
 /**
@@ -23,4 +23,10 @@ export function createVCStore<T>(options: AdapterFactoryOptions): IVCStore<T> {
 
   return new FileVCStore<T>(storeDir, filesystem, logger);
   
+}
+
+export function createVCIndexer(options: AdapterFactoryOptions): FileVCIndexer {
+  const { storeDir, filesystem, logger } = options;
+  
+  return new FileVCIndexer(storeDir, 'vc', filesystem, logger);
 }
