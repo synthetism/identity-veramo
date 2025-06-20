@@ -1,4 +1,5 @@
 import path from "node:path";
+import lockfile from 'proper-lockfile';  // You'll need to install this package
 import type { IndexEntry, IndexRecord } from "../types";
 import type { IFileVCIndexer } from "../file-vc-indexer.interface";
 import type { IFileSystem } from "../../filesystem/filesystem.interface";
@@ -25,8 +26,8 @@ export class FileVCIndexer implements IFileVCIndexer {
     return this.filesystem.existsSync(this.indexPath);
   }
 
-  find(keyword: string): IndexEntry | null {
-    const index = this.loadIndex();
+  async find(keyword: string): Promise<IndexEntry | null> {
+    const index = await this.loadIndex();
     return (
       Object.values(index).find(
         (entry) => entry.alias === keyword || entry.id === keyword,
@@ -34,13 +35,13 @@ export class FileVCIndexer implements IFileVCIndexer {
     );
   }
 
-  findByAlias(alias: string): IndexEntry | null {
-    const index = this.loadIndex();
+  async findByAlias(alias: string): Promise<IndexEntry | null> {
+    const index = await this.loadIndex();
     return index[alias] || null;
   }
 
-  findById(id: string): IndexEntry | null {
-    const index = this.loadIndex();
+  async findById(id: string): Promise<IndexEntry | null> {
+    const index = await this.loadIndex();
 
     // Find entry by ID
     for (const alias in index) {
@@ -52,21 +53,21 @@ export class FileVCIndexer implements IFileVCIndexer {
     return null;
   }
 
-  aliasExists(alias: string): boolean {
-    return this.findByAlias(alias) !== null;
+  async aliasExists(alias: string): Promise<boolean> {
+    return (await this.findByAlias(alias)) !== null;
   }
 
-  get(aliasOrId: string): IndexEntry | null {
+  async get(aliasOrId: string): Promise<IndexEntry | null> {
     // First try as alias
-    const byAlias = this.findByAlias(aliasOrId);
+    const byAlias = await this.findByAlias(aliasOrId);
     if (byAlias) return byAlias;
 
     // Then try as ID
-    return this.findById(aliasOrId);
+    return await this.findById(aliasOrId);
   }
 
-  create(entry: IndexEntry): void {
-    const index = this.loadIndex();
+  async create(entry: IndexEntry): Promise<void> {
+    const index = await this.loadIndex();
 
     // Add or update entry
     index[entry.alias] = {
@@ -80,8 +81,8 @@ export class FileVCIndexer implements IFileVCIndexer {
     );
   }
 
-  delete(alias: string): boolean {
-    const index = this.loadIndex();
+  async delete(alias: string): Promise<boolean> {
+    const index = await this.loadIndex();
 
     if (index[alias]) {
       delete index[alias];
@@ -93,12 +94,12 @@ export class FileVCIndexer implements IFileVCIndexer {
     return false;
   }
 
-  list(): IndexEntry[] {
-    const index = this.loadIndex();
+  async list(): Promise<IndexEntry[]> {
+    const index = await this.loadIndex();
     return Object.values(index);
   }
 
-  rebuild(entries: IndexEntry[]): void {
+  async rebuild(entries: IndexEntry[]): Promise<void> {
     const newIndex: Record<string, IndexEntry> = {};
 
     for (const entry of entries) {
@@ -112,7 +113,7 @@ export class FileVCIndexer implements IFileVCIndexer {
       }
     }
 
-    this.saveIndex(newIndex);
+    await  this.saveIndex(newIndex);
     this.logger?.info(`Rebuilt index with ${entries.length} entries`);
   }
 
@@ -128,15 +129,20 @@ export class FileVCIndexer implements IFileVCIndexer {
     }
   }
 
-  private loadIndex(): IndexRecord {
+  private async loadIndex(): Promise<IndexRecord> {
+
     if (!this.exists()) {
       return {}; // Simple empty object
     }
 
     try {
-      if (this.index) {
-        return this.index;
-      }
+
+      await lockfile.lock(this.indexPath, {
+        retries: 10,   // Try 10 times
+  
+      });
+
+      this.logger?.debug(`Acquired lock for index file: ${this.indexPath}`);
 
       const content = this.filesystem.readFileSync(this.indexPath);
       const parsed = JSON.parse(content);
@@ -156,29 +162,36 @@ export class FileVCIndexer implements IFileVCIndexer {
 
         // Save in new format (optional)
         this.saveIndex(entries);
-      } else {
-        // Assume it's already in the right format
-        this.index = parsed;
-      }
+      } 
+      
+      lockfile.unlock(this.indexPath);
+     
+      return this.index ? this.index : {};
 
-      return this.index || {};
     } catch (error) {
       this.logger?.error("Error loading VC index:", error);
-      return {};
+      throw new Error(`Failed to load index: ${error}`);
     }
   }
 
-  private saveIndex(indexRecord: IndexRecord): void {
+  private async saveIndex(indexRecord: IndexRecord): Promise<void> {
     try {
       const withVersion = {
         entries: indexRecord,
         version: "1.0.0",
       };
+
+       await lockfile.lock(this.indexPath, {
+        retries: 10,   // Try 10 times
+  
+      });
       
       this.filesystem.writeFile(
         this.indexPath,
         JSON.stringify(withVersion, null, 2),
       );
+
+      lockfile.unlock(this.indexPath);
 
       this.index = indexRecord;
     } catch (error) {

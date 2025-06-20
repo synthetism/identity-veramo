@@ -254,7 +254,7 @@ export class VCService<T extends SynetVerifiableCredential> implements IVCServic
     }
 
     try {
-      const index = this.indexer.list();
+      const index = await this.indexer.list();
 
       const vcs: T[] = [];
 
@@ -334,7 +334,7 @@ export class VCService<T extends SynetVerifiableCredential> implements IVCServic
         return Result.fail("Invalid credential ID format");
       }
 
-      if(this.indexer.aliasExists(alias)) {
+      if(await this.indexer.aliasExists(alias)) {
         this.logger?.debug(`Credential with alias ${alias} already exists, skipping save`);
         return Result.success(undefined);
       }

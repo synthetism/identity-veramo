@@ -5,51 +5,51 @@ import type { IndexEntry } from "./types";
  * Interface for IDL indexer operations
  * Provides lookup between alias, DID, and key references
  */
-export interface IFileVCIndexer extends IIndexer<IndexEntry> {
+export interface IFileVCIndexer  {
   /**
    * Check if the index exists
    */
   exists(): boolean;
 
-  find(keyword: string): IndexEntry | null;
+  find(keyword: string): Promise<IndexEntry | null>;
 
   /**
    * Find entry by alias
    */
-  findByAlias(alias: string): IndexEntry | null;
+  findByAlias(alias: string): Promise<IndexEntry | null>;
 
   /**
    * Find entry by DID
    */
-  findById(did: string): IndexEntry | null;
+  findById(did: string): Promise<IndexEntry | null>;
 
   /**
    * Check if alias exists in index
    */
-  aliasExists(alias: string): boolean;
+  aliasExists(alias: string): Promise<boolean>;
 
   /**
    * Unified lookup by alias or DID
    */
-  get(aliasOrDid: string): IndexEntry | null;
+  get(aliasOrDid: string): Promise<IndexEntry | null>;
 
   /**
    * Add or update entry in the index
    */
-  create(entry: IndexEntry): void;
+  create(entry: IndexEntry): Promise<void>;
 
   /**
    * Remove entry from the index
    */
-  delete(alias: string): boolean;
+  delete(alias: string): Promise<boolean>;
 
   /**
    * List all entries
    */
-  list(): IndexEntry[];
+  list(): Promise<IndexEntry[]>;
 
   /**
    * Rebuild index (for recovery or migration)
    */
-  rebuild(entries: IndexEntry[]): void;
+  rebuild(entries: IndexEntry[]): Promise<void>;
 }
