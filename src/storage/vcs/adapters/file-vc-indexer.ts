@@ -123,6 +123,10 @@ export class FileVCIndexer implements IFileVCIndexer {
       if (!this.filesystem.existsSync(indexDir)) {
         this.filesystem.ensureDir(indexDir);
       }
+
+      if( !this.filesystem.existsSync(this.indexPath)) {
+        this.filesystem.writeFile(this.indexPath, JSON.stringify({ entries: {}, version: "1.0.0" }, null, 2));
+      }
     } catch (error) {
       this.logger?.error("Error ensuring index directory:", error);
       throw new Error(`Failed to create index directory: ${error}`);
@@ -136,6 +140,11 @@ export class FileVCIndexer implements IFileVCIndexer {
     }
 
     try {
+
+      if(!this.filesystem.existsSync(this.indexPath)) {
+        this.logger?.warn(`Index file does not exist: ${this.indexPath}`);
+        return {}; // Return empty index if file doesn't exist
+      }
 
       await lockfile.lock(this.indexPath, {
         retries: 10,   // Try 10 times
@@ -174,17 +183,20 @@ export class FileVCIndexer implements IFileVCIndexer {
     }
   }
 
+
   private async saveIndex(indexRecord: IndexRecord): Promise<void> {
     try {
-      const withVersion = {
+       const withVersion = {
         entries: indexRecord,
         version: "1.0.0",
-      };
+       };
 
-       await lockfile.lock(this.indexPath, {
+
+        await lockfile.lock(this.indexPath, {
         retries: 10,   // Try 10 times
   
-      });
+       });
+    
       
       this.filesystem.writeFile(
         this.indexPath,
