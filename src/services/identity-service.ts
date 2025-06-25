@@ -20,8 +20,8 @@ export interface IdentityServiceOptions {
  */
 export class IdentityService {
   constructor(
-    private didStore: IDidService,
-    private keyStore: IKeyService,
+    private didService: IDidService,
+    private keyService: IKeyService,
     private indexer: IFileIndexer, // Now just using the indexer
     public readonly options: IdentityServiceOptions = {},
     public readonly logger?: Logger,
@@ -41,31 +41,14 @@ export class IdentityService {
       if (this.indexer.aliasExists(alias)) {
         return Result.fail(`Identity with alias "${alias}" already exists`);
       }
-
-      // 1. Create a key
-      const keyResult = await this.keyStore.create("Ed25519", {
-        name: alias,
-        ...meta,
-      });
-
-      if (!keyResult.isSuccess || !keyResult.value) {
-        return Result.fail(
-          `Failed to create key: ${keyResult.errorMessage}`,
-          keyResult.errorCause,
-        );
-      }
-
-      const key = keyResult.value;
-
+  
+   
       // 2. Create a DID with the key
-      const didResult = await this.didStore.create(alias, {
-        keyId: key.kid,
-        keyType: "Ed25519",
-      });
+      const didResult = await this.didService.create(alias);
 
       if (!didResult.isSuccess || !didResult.value) {
         // Clean up the key if DID creation fails
-        await this.keyStore.delete(key.kid);
+        //await this.keyStore.delete(key.kid);
         return Result.fail(
           `Failed to create DID: ${didResult.errorMessage}`,
           didResult.errorCause,
@@ -78,7 +61,7 @@ export class IdentityService {
       const entry: IndexEntry = {
         alias,
         did: did.did,
-        kid: key.kid,
+        kid: did.controllerKeyId || "",
         description: meta?.description || "",
         createdAt: new Date().toISOString(),
         meta: {
@@ -89,7 +72,7 @@ export class IdentityService {
 
       this.indexer.create(entry);
 
-      this.logger?.info(
+      this.logger?.debug(
         `Successfully created identity "${alias}" with DID ${did.did}`,
       );
       return Result.success(entry);
@@ -119,7 +102,7 @@ export class IdentityService {
       const entry = entryResult.value;
 
       // 2. Delete DID
-      const didResult = await this.didStore.delete(entry.did);
+      const didResult = await this.didService.delete(entry.did);
       if (!didResult.isSuccess) {
         this.logger?.error(
           `Failed to delete DID ${entry.did}: ${didResult.errorMessage}`,
@@ -128,7 +111,7 @@ export class IdentityService {
       }
 
       // 3. Delete key
-      const keyResult = await this.keyStore.delete(entry.kid);
+      const keyResult = await this.keyService.delete(entry.kid);
       if (!keyResult.isSuccess) {
         this.logger?.error(
           `Failed to delete key ${entry.kid}: ${keyResult.errorMessage}`,
@@ -210,7 +193,7 @@ export class IdentityService {
       const entry = entryResult.value;
 
       // 3. Update DID alias
-      const didResult = await this.didStore.update(entry.did, {
+      const didResult = await this.didService.update(entry.did, {
         alias: newAlias,
       });
       if (!didResult.isSuccess) {
@@ -266,7 +249,7 @@ export class IdentityService {
       const entry = entryResult.value;
 
       // 2. Get DID document
-      const didResult = await this.didStore.get(entry.did);
+      const didResult = await this.didService.get(entry.did);
       if (!didResult.isSuccess) {
         return Result.fail(
           `Failed to get DID document: ${didResult.errorMessage}`,
@@ -278,7 +261,7 @@ export class IdentityService {
       // 3. Get associated keys
       const keys = [];
 
-      const keyPromises = didDoc.keys.map((k) => this.keyStore.get(k.kid));
+      const keyPromises = didDoc.keys.map((k) => this.keyService.get(k.kid));
 
       const keyResults = await Promise.all(keyPromises);
       for (const result of keyResults) {

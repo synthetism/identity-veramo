@@ -84,7 +84,7 @@ export class VCService<T extends SynetVerifiableCredential> implements IVCServic
         }));
 
         this.indexer.rebuild(indexEntries);
-        this.logger?.info(`Rebuilt index with ${indexEntries.length} entries`);
+
       } else {
         this.logger?.error("Failed to rebuild index:", keysResult.errorMessage);
       }

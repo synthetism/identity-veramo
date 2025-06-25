@@ -76,7 +76,7 @@ export class FileIndexer implements IIndexer<IndexEntry> {
 
     this.saveIndex(index);
     this.logger?.debug(
-      `Added/updated index entry for "${entry.alias}" (${entry.did})`,
+      `Created index entry for "${entry.alias}" (${entry.did})`,
     );
   }
 

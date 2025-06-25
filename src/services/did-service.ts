@@ -2,6 +2,9 @@ import { Result } from "@synet/patterns";
 import type { Logger } from "@synet/logger";
 import type { IDIDManager, IIdentifier, TAgent, TKeyType } from "@veramo/core";
 
+import Debug from 'debug'
+const debug = Debug('synet:identity:did-service');
+
 /**
  * Interface for DID store operations
  * Methods:
@@ -14,7 +17,7 @@ import type { IDIDManager, IIdentifier, TAgent, TKeyType } from "@veramo/core";
 export interface IDidService {
   create(
     alias: string,
-    options?: { keyId: string; keyType?: TKeyType },
+    options?:{ keyId: string; keyType?: TKeyType },
   ): Promise<Result<IIdentifier>>;
   get(did: string): Promise<Result<IIdentifier>>;
   find(filter: { alias?: string }): Promise<Result<IIdentifier[]>>;
@@ -36,24 +39,26 @@ export class DidService implements IDidService {
 
   async create(
     alias: string,
-    options: { keyId?: string; keyType?: string } = {},
+    options: { keyType?: string } = {},
   ): Promise<Result<IIdentifier>> {
     try {
-      this.logInfo(`Creating DID with alias "${alias}"...`);
+
+      this.logger?.debug('Creating DID with alias {alias}...',{ alias:alias });
 
       const didData = await this.agent.didManagerCreate({
         provider: "did:key",
         options: {
-          alias,
+          alias: alias,
           keyType: options.keyType || "Ed25519",
-          keyId: options.keyId,
         },
       });
+    
+      debug('Created', didData.did);
+      this.logger?.debug(`Created DID: ${didData.did}`);
 
-      this.logInfo(`Created DID: ${didData.did}`);
       return Result.success(didData);
     } catch (error) {
-      this.logError(`Failed to create DID: ${error}`);
+      this.logger?.error(`Failed to create DID: ${error}`);
       return Result.fail(
         `Failed to create DID: ${error}`,
         error instanceof Error ? error : new Error(String(error)),
@@ -63,22 +68,22 @@ export class DidService implements IDidService {
 
   async get(did: string): Promise<Result<IIdentifier>> {
     try {
-      this.logInfo(`Getting DID: ${did}`);
+      this.logger?.debug(`Getting DID: ${did}`);
       const didDoc = await this.agent.didManagerGet({ did });
       return Result.success(didDoc);
     } catch (error) {
-      this.logError(`Failed to get DID ${did}: ${error}`);
+      this.logger?.error(`Failed to get DID ${did}: ${error}`);
       return Result.fail(`Failed to get DID: ${error}`);
     }
   }
 
   async find(filter: { alias?: string } = {}): Promise<Result<IIdentifier[]>> {
     try {
-      this.logInfo(`Finding DIDs with filter: ${JSON.stringify(filter)}`);
+      this.logger?.debug(`Finding DIDs with filter: ${JSON.stringify(filter)}`);
       const dids = await this.agent.didManagerFind(filter);
       return Result.success(dids);
     } catch (error) {
-      this.logError(`Failed to find DIDs: ${error}`);
+      this.logger?.error(`Failed to find DIDs: ${error}`);
       return Result.fail(`Failed to find DIDs: ${error}`);
     }
   }
@@ -88,7 +93,7 @@ export class DidService implements IDidService {
     options: { alias?: string } = {},
   ): Promise<Result<IIdentifier>> {
     try {
-      this.logInfo(
+      this.logger?.debug(
         `Updating DID ${did} with options: ${JSON.stringify(options)}`,
       );
 
@@ -102,27 +107,20 @@ export class DidService implements IDidService {
       const updatedDid = await this.agent.didManagerGet({ did });
       return Result.success(updatedDid);
     } catch (error) {
-      this.logError(`Failed to update DID ${did}: ${error}`);
+      this.logger?.error(`Failed to update DID ${did}: ${error}`);
       return Result.fail(`Failed to update DID: ${error}`);
     }
   }
 
   async delete(did: string): Promise<Result<boolean>> {
     try {
-      this.logInfo(`Deleting DID: ${did}`);
+      this.logger?.debug(`Deleting DID: ${did}`);
       await this.agent.didManagerDelete({ did });
       return Result.success(true);
     } catch (error) {
-      this.logError(`Failed to delete DID ${did}: ${error}`);
+      this.logger?.error(`Failed to delete DID ${did}: ${error}`);
       return Result.fail(`Failed to delete DID: ${error}`);
     }
   }
 
-  private logInfo(message: string): void {
-    this.logger?.info(message);
-  }
-
-  private logError(message: string, error?: unknown): void {
-    this.logger?.error(message, error);
-  }
 }

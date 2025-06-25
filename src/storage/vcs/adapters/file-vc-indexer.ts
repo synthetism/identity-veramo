@@ -114,7 +114,6 @@ export class FileVCIndexer implements IFileVCIndexer {
     }
 
     await  this.saveIndex(newIndex);
-    this.logger?.info(`Rebuilt index with ${entries.length} entries`);
   }
 
   private ensureIndexDirectory(): void {
