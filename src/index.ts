@@ -13,7 +13,7 @@ import { DIDManager } from "@veramo/did-manager";
 import { KeyDIDProvider } from "@veramo/did-provider-key";
 import { CredentialPlugin } from "@veramo/credential-w3c";
 import { getNullLogger, type Logger } from "@synet/logger";
-import type { SynetVerifiableCredential } from "./types/credential";
+import type { SynetVerifiableCredential } from "@synet/credentials";
 
 /* Storage */
 
@@ -76,12 +76,14 @@ export function createIdentityService(
 
    const agent = createAgentWithKMS(adapters);
 
-   const didStore = new DidService(agent, effectiveLogger);
-   const keyStore = new KeyService(agent, effectiveLogger);
+   const didService = new DidService(agent, effectiveLogger);
+   const keyService = new KeyService(agent, effectiveLogger);
+   const vcService = new VCService<T>(agent, vcIndexer, vcStore, options, effectiveLogger);
 
   return new IdentityService(
-    didStore,
-    keyStore,
+    didService,
+    keyService,
+    vsService,
     idIndexer,
     options,
     effectiveLogger,

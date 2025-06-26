@@ -10,7 +10,7 @@ import { Result } from "@synet/patterns";
 import type { IIndexer } from "@synet/patterns/storage";
 import type { Logger } from "@synet/logger";
 import type { IVCStore } from "../storage/vcs/vc-store.interface";
-import type { SynetVerifiableCredential } from "../types/credential";
+import type { SynetVerifiableCredential } from "@synet/credentials";
 import type { IndexEntry } from "../storage/vcs/types";
 import type { IFileVCIndexer } from "src/storage/vcs/file-vc-indexer.interface";
 export interface VCServiceOptions {

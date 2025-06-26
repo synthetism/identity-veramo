@@ -5,6 +5,9 @@ import type { IKeyService } from "./key-service";
 import type { IFileIndexer } from "../storage/indexer/file-indexer.interface";
 import type { IndexEntry } from "../storage/indexer/types";
 import type { IIdentifier, KeyMetadata, IKey, TKeyType } from "@veramo/core";
+import type { IVCService } from "./vc-service";
+import type { SynetVerifiableCredential,IdentitySubject, AuthorizationSubject } from "@synet/credentials";
+import { CredentialType  } from "@synet/credentials";
 
 /**
  * Identity Service Options
@@ -22,6 +25,7 @@ export class IdentityService {
   constructor(
     private didService: IDidService,
     private keyService: IKeyService,
+    private vcService: IVCService, // Assuming vcService is defined elsewhere
     private indexer: IFileIndexer, // Now just using the indexer
     public readonly options: IdentityServiceOptions = {},
     public readonly logger?: Logger,
@@ -55,7 +59,26 @@ export class IdentityService {
         );
       }
 
+
       const did = didResult.value;
+
+   const credentialSubject: IdentitySubject = {
+      holder: {
+        id: did.did,
+        name: alias,
+      },
+      issuedBy: {
+        id: did.did,
+        name: alias,
+      },
+    };
+
+     const vcResult = await this.vcService.issueVC<IdentitySubject>(
+        credentialSubject,
+        [CredentialType.Identity],           
+        did.did,
+     );
+
 
       // 3. Create and index the identity entry
       const entry: IndexEntry = {
