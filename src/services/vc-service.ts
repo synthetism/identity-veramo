@@ -7,12 +7,10 @@ import type {
 } from "@veramo/core";
 import { createId } from '@paralleldrive/cuid2'
 import { Result } from "@synet/patterns";
-import type { IIndexer } from "@synet/patterns/storage";
 import type { Logger } from "@synet/logger";
-import type { IVCStore } from "../storage/vcs/vc-store.interface";
-import type { SynetVerifiableCredential } from "@synet/credentials";
-import type { IndexEntry } from "../storage/vcs/types";
-import type { IFileVCIndexer } from "src/storage/vcs/file-vc-indexer.interface";
+import type { SynetVerifiableCredential, BaseCredentialSubject } from "@synet/credentials";
+import type { AbstractVCStore } from "@synet/vault";
+
 export interface VCServiceOptions {
   defaultIssuerDid?: string;
 }
@@ -34,94 +32,41 @@ export interface IVCService<T = unknown> {
 }
 
 /**
- * Service for managing Verifiable Credentials
+ * Service for managing Verifiable Credentials with vault storage
  */
 export class VCService<T extends SynetVerifiableCredential> implements IVCService {
   constructor(
     private readonly agent: TAgent<
       IKeyManager & IDIDManager & ICredentialPlugin
     >,
-    private readonly indexer: IFileVCIndexer,
-    private readonly storage?: IVCStore<T>,
+    private readonly storage: AbstractVCStore<SynetVerifiableCredential<BaseCredentialSubject>>,
     private readonly options: VCServiceOptions = {},
     private readonly logger?: Logger,
-  ) {
-
-    this.ensureIndex().catch((error) => {
-      this.logger?.error("Failed to ensure index:", error);
-    });
-  }
-
-  /**
-   * Ensure index exists and is up-to-date
-   */
-  private async ensureIndex(): Promise<void> {
-    try {
-      if (!this.indexer.exists()) {
-        this.logger?.debug("Key index does not exist, creating new index");
-        await this.rebuildIndex();
-      }
-    } catch (error) {
-      this.logger?.error("Error ensuring index:", error);
-    }
-  }
-
-  /**
-   * Rebuild the index from the repository
-   */
-  private async rebuildIndex(): Promise<void> {
-    try {
-      this.logger?.info("Rebuilding key index from repository");
-      const keysResult = await this.listVCs();
-
-      if (keysResult.isSuccess && keysResult.value) {
-        
-        const indexEntries: IndexEntry[] = keysResult.value.map((key) => ({
-          id: key.id,
-          alias: key.id.split(":").pop() || createId(),
-          type: key.type,
-          createdAt: key.issuanceDate,
-        }));
-
-        this.indexer.rebuild(indexEntries);
-
-      } else {
-        this.logger?.error("Failed to rebuild index:", keysResult.errorMessage);
-      }
-    } catch (error) {
-      this.logger?.error("Error rebuilding index:", error);
-    }
-  }
+  ) {}
 
   generateVCId = (type: string): string => {
-    const cuid = createId(); // optionally pass config
-
+    const cuid = createId();
     return `urn:synet:${type}:${cuid}`;
   }
 
   /**
    * Issue a new verifiable credential
-   * @param subject The credential subject data
-   * @param type Additional credential types
-   * @param issuerDid Optional issuer DID (uses default if not provided)
-   * @returns Result containing the issued credential
    */
   async issueVC<S extends Record<string, unknown>>(
     subject: S,
     type: string | string[],
     issuerDid?: string,
     options?: {
-      vcId?: string; // Optional ID for the credential
+      vcId?: string;
       context?: string[];
       issuanceDate?: string;
       expirationDate?: string;
     }
   ): Promise<Result<T>> {
     try {
-
-      const defaultContext= ['https://www.w3.org/2018/credentials/v1'];
+      const defaultContext = ['https://www.w3.org/2018/credentials/v1'];
       
-      if(options?.context) {
+      if (options?.context) {
         const contextArray = Array.isArray(options.context) ? options.context : [options.context];
         defaultContext.push(...contextArray);
       }
@@ -155,27 +100,25 @@ export class VCService<T extends SynetVerifiableCredential> implements IVCServic
       const appType = typeArray.find(t => t !== "VerifiableCredential") || "Generic";
       const vcId = options?.vcId || this.generateVCId(appType);
 
-
       try {
         // Create the credential
         const vc = (await this.agent.createVerifiableCredential({
           credential: {
-             id: vcId,
+            id: vcId,
             '@context': context,
             issuer: { id: effectiveIssuerDid },
             type: ["VerifiableCredential", ...typeArray],
             issuanceDate: options?.issuanceDate || new Date().toISOString(),
             expirationDate: options?.expirationDate,
             credentialSubject: subject,
-       
           },
           proofFormat: "jwt",
         })) as T;
 
-        // Store the credential if storage is configured
+        // Store the credential
         const saveResult = await this.save(vc);
 
-        if(!saveResult.isSuccess) {
+        if (!saveResult.isSuccess) {
           this.logger?.error(`Failed to save credential: ${saveResult.errorMessage}`);
         }
 
@@ -200,8 +143,6 @@ export class VCService<T extends SynetVerifiableCredential> implements IVCServic
 
   /**
    * Verify a credential
-   * @param vc The verifiable credential to verify
-   * @returns Result with verification status
    */
   async verifyVC(vc: T): Promise<Result<boolean>> {
     try {
@@ -224,18 +165,12 @@ export class VCService<T extends SynetVerifiableCredential> implements IVCServic
 
   /**
    * Retrieve a credential by ID
-   * @param id Credential ID
-   * @returns Result with the credential or null if not found
    */
   async getVC(id: string): Promise<Result<T | null>> {
-    if (!this.storage) {
-      return Result.fail("Storage not configured for VC service");
-    }
-
     try {
-
-      const vc = await this.storage.get(id);
-      return Result.success(vc);
+      const alias = id.split(":").pop() || id;
+      const vc = await this.storage.get(alias);
+      return Result.success(vc as T | null);
     } catch (error) {
       return Result.fail(
         `Error retrieving credential: ${error instanceof Error ? error.message : String(error)}`,
@@ -246,27 +181,11 @@ export class VCService<T extends SynetVerifiableCredential> implements IVCServic
 
   /**
    * List all stored credentials
-   * @returns Result with array of credentials
    */
   async listVCs(): Promise<Result<T[]>> {
-    if (!this.storage) {
-      return Result.fail("Storage not configured for VC service");
-    }
-
     try {
-      const index = await this.indexer.list();
-
-      const vcs: T[] = [];
-
-      for (const vc of index) {
-        const storedVC = await this.storage.get(vc.alias);
-        if (storedVC) {
-          vcs.push(storedVC);
-        }
-      }
-
-      return Result.success(vcs);
-
+      const vcs = await this.storage.list();
+      return Result.success(vcs as T[]);
     } catch (error) {
       return Result.fail(
         `Error listing credentials: ${error instanceof Error ? error.message : String(error)}`,
@@ -277,16 +196,11 @@ export class VCService<T extends SynetVerifiableCredential> implements IVCServic
 
   /**
    * Delete a credential by ID
-   * @param id Credential ID
-   * @returns Result with deletion status
    */
   async deleteVC(id: string): Promise<Result<boolean>> {
-    if (!this.storage) {
-      return Result.fail("Storage not configured for VC service");
-    }
-
     try {
-      const deleted = await this.storage.delete(id);
+      const alias = id.split(":").pop() || id;
+      const deleted = await this.storage.delete(alias);
       return Result.success(deleted);
     } catch (error) {
       return Result.fail(
@@ -296,22 +210,16 @@ export class VCService<T extends SynetVerifiableCredential> implements IVCServic
     }
   }
 
-  async storeVC(
-    vc: T,
-  ): Promise<Result<void>> {
-    
-
+  async storeVC(vc: T): Promise<Result<void>> {
     if (!vc.id) {
       return Result.fail("Credential must have an ID to be stored");
     }
+    
     try {
-
       const saveResult = await this.save(vc);
-
-       if(!saveResult.isSuccess) {
-          this.logger?.error(`Failed to save credential: ${saveResult.errorMessage}`);
-        }
-
+      if (!saveResult.isSuccess) {
+        this.logger?.error(`Failed to save credential: ${saveResult.errorMessage}`);
+      }
       return Result.success(undefined);
     } catch (error) {
       return Result.fail(
@@ -322,41 +230,26 @@ export class VCService<T extends SynetVerifiableCredential> implements IVCServic
   }
 
   async save(vc: T): Promise<Result<void>> {
-    if (!this.storage) {
-      return Result.fail("Storage not configured for VC service");
-    }
-
     try {
       const id = vc.id;
-     
-      const alias = id.split(":").pop()
-      if(alias === undefined) {
+      const alias = id.split(":").pop();
+      
+      if (alias === undefined) {
         return Result.fail("Invalid credential ID format");
       }
 
-      if(await this.indexer.aliasExists(alias)) {
+      if (await this.storage.exists(alias)) {
         this.logger?.debug(`Credential with alias ${alias} already exists, skipping save`);
         return Result.success(undefined);
       }
- 
-      await this.storage.create(alias,vc);
 
-      this.indexer.create({
-        id: vc.id,
-        alias: alias,
-        type: vc.type || ["VerifiableCredential"],
-        createdAt: vc.issuanceDate || new Date().toISOString(),
-        issuerId: vc.issuer?.id || this.options.defaultIssuerDid,
-        expirationDate: vc.expirationDate,
-      });
-       this.logger?.debug(`Stored credential ${id} with alias ${alias}`);
+      await this.storage.create(alias, vc as SynetVerifiableCredential<BaseCredentialSubject>);
 
-
-
+      this.logger?.debug(`Stored credential ${id} with alias ${alias}`);
       return Result.success(undefined);
     } catch (error) {
       return Result.fail(
-        `Error saving VC store: ${error instanceof Error ? error.message : String(error)}`,
+        `Error saving VC: ${error instanceof Error ? error.message : String(error)}`,
         error instanceof Error ? error : new Error(String(error)),
       );
     }

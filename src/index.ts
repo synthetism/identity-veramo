@@ -16,22 +16,17 @@ import { getNullLogger, type Logger } from "@synet/logger";
 import type { SynetVerifiableCredential } from "@synet/credentials";
 
 /* Storage */
-
 import { createIndexer } from "./storage/indexer/indexer-factory";
 import { NodeFileSystem } from "./storage/filesystem/filesystem";
-import { MemFileSystem } from "./storage/filesystem/memory";
 
 /* Services */
-
 import { DidService } from "./services/did-service";
 import { KeyService } from "./services/key-service";
-
 import {
   VCService,
   type VCServiceOptions,
   type IVCService,
 } from "./services/vc-service";
-
 import {
   IdentityService,
   type IdentityServiceOptions,
@@ -39,11 +34,11 @@ import {
 
 import path from "node:path";
 import os from "node:os";
-import { createStorageAdapters, type StorageAdapters } from "./storage/adapters/adapter-factory";
-import { createVCStore, createVCIndexer } from "./storage/vcs/vc-store-factory";
+import { createVault, type Vault, type StorageAdapters } from "@synet/vault";
 
 // Export file system implementations
 export * from "./services/vc-service";
+export * from "./services/identity-service";
 
 export type { IIdentifier, IKey, DIDDocument, W3CVerifiableCredential, VerifiableCredential, IssuerType } from "@veramo/core";
 
@@ -52,80 +47,73 @@ export enum StorageType {
   ENCRYPTED = "encrypted", // Future: Implement encrypted storage
   CLOUD = "cloud",
 }
-export type {IdentityService,  VCService};
+
+export type { IdentityService, VCService };
+
 /**
- * Create an identity service with the specified storage type
+ * Create an identity service with vault-based storage
  */
 export function createIdentityService(
   options: IdentityServiceOptions = {},
   logger?: Logger,
 ): IdentityService {
    
-   const effectiveLogger = logger || getNullLogger();
-   const storeDir =
-   options.storeDir || path.join(os.homedir(), ".synet", "identity");
+  const effectiveLogger = logger || getNullLogger();
+  const storeDir = options.storeDir || path.join(os.homedir(), ".synet");
 
-   const filesystem = new NodeFileSystem();
-   const idIndexer = createIndexer(storeDir, 'identity', filesystem, logger);
+  const filesystem = new NodeFileSystem();
+  //const idIndexer = createIndexer(storeDir, 'identity', filesystem, logger);
 
-   const adapters = createStorageAdapters({
-     storeDir,
-     filesystem,
-     logger: effectiveLogger
-   });
+  // Create vault system
+  const vault = createVault({
+    storeDir: path.join(storeDir, "vaults")
+  }, effectiveLogger);
 
-   const agent = createAgentWithKMS(adapters);
+  const agent = createAgentWithKMS(vault.adapters);
 
-   const didService = new DidService(agent, effectiveLogger);
-   const keyService = new KeyService(agent, effectiveLogger);
-   const vcService = new VCService<T>(agent, vcIndexer, vcStore, options, effectiveLogger);
+  const didService = new DidService(agent, effectiveLogger);
+  const keyService = new KeyService(agent, effectiveLogger);
+  
+  // Create VC service with vault's VC store
+  const vcService = new VCService<SynetVerifiableCredential>(
+    agent, 
+    vault.adapters.vcStore, 
+    options, 
+    effectiveLogger
+  );
 
   return new IdentityService(
     didService,
     keyService,
-    vsService,
-    idIndexer,
-    options,
+    vcService,
+    {
+      ...options,
+      vaultOperator: vault.operator
+    },
     effectiveLogger,
   );
 }
 
-// Add a standalone function to create just the VC service
+// Add a standalone function to create just the VC service with vault
 export function createVCService<T extends SynetVerifiableCredential>(
   options: VCServiceOptions & { storeDir?: string } = {},
   logger?: Logger,
 ): VCService<T> {
   const effectiveLogger = logger || getNullLogger();
-  const storeDir =
-    options.storeDir || path.join(os.homedir(), ".synet", "vcs");
+  const storeDir = options.storeDir || path.join(os.homedir(), ".synet");
       
-  const filesystem = new NodeFileSystem();
+  // Create vault system for VC storage
+  const vault = createVault({
+    storeDir: path.join(storeDir, "vaults")
+  }, effectiveLogger);
 
-  const adapters = createStorageAdapters({
-    storeDir,
-    filesystem,
-    logger: effectiveLogger
-  });
-  
-  const agent = createAgentWithKMS(adapters);
-  const vcStore = createVCStore<T>({
-    storeDir,
-    filesystem,
-    logger: effectiveLogger
-  });
+  const agent = createAgentWithKMS(vault.adapters);
 
-  const vcIndexer = createVCIndexer({
-    storeDir,
-    filesystem,
-    logger: effectiveLogger
-  });
-
-  return new VCService<T>(agent, vcIndexer, vcStore, options, effectiveLogger);
+  return new VCService<T>(agent, vault.adapters.vcStore, options, effectiveLogger);
 }
 
 function createAgentWithKMS(
   adapters: StorageAdapters,
-
 ): TAgent<IKeyManager & IDIDManager & ICredentialPlugin> {
 
   const { keyStore, didStore, privateKeyStore } = adapters;
