@@ -10,8 +10,7 @@ export class FileDIDStore extends AbstractDIDStore {
     private filePath: string,
     private logger?: Logger
   ) {
-    super();
-    
+    super();    
   }
 
   async getDID(args: { did: string; alias: string }): Promise<IIdentifier> {

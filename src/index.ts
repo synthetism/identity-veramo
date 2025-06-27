@@ -1,7 +1,8 @@
 import { getNullLogger, type Logger } from "@synet/logger";
 
 /* Storage */
-import { NodeFileSystem } from "./shared/filesystem/filesystem";
+import { NodeFileSystem as FileSystemSync } from "./shared/filesystem/filesystem";
+import { NodeFileSystem as FileSystemAsync } from "./shared/filesystem/promises/filesystem";
 
 /* Services */
 import type { IVCService } from "./shared/provider";
@@ -41,7 +42,8 @@ export function createIdentityService(
 
   const effectiveLogger = logger || getNullLogger();
   const storeDir = options.storeDir || path.join(os.homedir(), ".synet");
-  const filesystem = new NodeFileSystem();
+  const filesystemAsync = new FileSystemAsync();
+  const filesystem = new FileSystemSync();
 
   const services = createVeramoProvider(
     { storeDir: storeDir },
@@ -51,7 +53,7 @@ export function createIdentityService(
 
   // Create vault system
   const vault = createVault(
-    filesystem,
+    filesystemAsync,
     {
       storeDir: storeDir
     },
@@ -82,7 +84,7 @@ export function createVCService(
 ): IVCService {
   const effectiveLogger = logger || getNullLogger();
   const storeDir = options.storeDir || path.join(os.homedir(), ".synet");      
-  const filesystem = new NodeFileSystem();
+  const filesystem = new FileSystemSync();
  
   const services = createVeramoProvider(
     { storeDir: storeDir },

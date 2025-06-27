@@ -2,10 +2,8 @@
 import type { Logger } from "@synet/logger";
 import os from "node:os";
 import path from "node:path";
-
-import type { SynetVerifiableCredential, BaseCredentialSubject } from "@synet/credentials";
 import { getNullLogger } from "@synet/logger";
-import { FileVaultStorage } from "./storage/storage/file-vault-storage";
+import { FileVaultStorage } from "./services/file-vault-storage";
 import { VaultOperator } from "./services/vault-operator";
 
 // Export types
@@ -13,7 +11,7 @@ import { VaultOperator } from "./services/vault-operator";
 export type { IdentityVault, IdentityFile } from "@synet/vault-core";
 export type { VaultId } from "./domain/value-objects/vault-id";
 
-import type { IFileSystem } from "../shared/filesystem/filesystem.interface";
+import type { IFileSystem } from "../shared/filesystem/promises/filesystem.interface";
 import { VaultSynchronizer } from "./services/vault-synchronizer";
 import type { IVaultOperator } from "@synet/vault-core";
 import { ObservableFileSystem } from "../shared/filesystem/observable";
@@ -44,7 +42,6 @@ export function createVault(
   //const observableFilesystem = new ObservableFileSystem(filesystem,eventEmitter, effectiveLogger);
   //const dynamicFs = new DynamicVaultFilesystem(filesystem, storeDir, logger);
     
-
    const vaultStorage = new FileVaultStorage(
     storeDir,
     filesystem, // Use regular filesystem for vault storage
@@ -54,11 +51,10 @@ export function createVault(
       filesystem,
       vaultStorage,
       '', // No active vault initially
-      effectiveLogger.child('SYNCH')
+      effectiveLogger.child('SYNC')
   );
 
   const operator = new VaultOperator(
-    filesystem,
     vaultStorage,
     synchronizer,
     effectiveLogger.child('OPERATOR')

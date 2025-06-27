@@ -1,4 +1,4 @@
-import type { IKey } from "@veramo/core";
+import type { IKey, ManagedKeyInfo } from "@veramo/core";
 import { AbstractKeyStore } from "@veramo/key-manager";
 import VError  from "verror";
 import type { Logger } from "@synet/logger";
@@ -41,9 +41,9 @@ export class KeyStore extends AbstractKeyStore {
     }
   }
 
-  async listKeys(): Promise<Exclude<IKey, "privateKeyHex">[]> {
+  async listKeys(): Promise<ManagedKeyInfo[]> {
     const data = this.loadData();
-    return Object.values(data.keys) as Exclude<IKey, "privateKeyHex">[];
+    return Object.values(data.keys) as ManagedKeyInfo[];
   }
 
   private loadData(): AdapterData['keys'] | Record<string, IKey> {

@@ -64,7 +64,7 @@ export function createVeramoProvider(
    
   const storeDir = options.storeDir || path.join(os.homedir(), ".synet");
 
-  const eventEmitter = fileSystemChangeEmitter;
+  //const eventEmitter = fileSystemChangeEmitter;
   //const observableFs = new ObservableFileSystem(filesystem, eventEmitter, logger);
 
   const adapters = createAdapters(

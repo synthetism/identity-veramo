@@ -11,7 +11,7 @@ import type { Logger } from "@synet/logger";
 import path from "node:path";
 import { Result } from "@synet/patterns";
 import type { EventObserver, Event } from "@synet/patterns";
-import type { IFileSystem } from "../../shared/filesystem/filesystem.interface";
+import type { IFileSystem } from "../../shared/filesystem/promises/filesystem.interface";
 import chalk from "chalk";
 /**
  * VaultSynchronizer
@@ -80,9 +80,9 @@ export class VaultSynchronizer implements EventObserver<VaultEvent>  {
     }
 
     if (!section) {
-    this.logger?.debug(`Ignoring unknown file: ${filename}`);
-    return;
-  }
+      this.logger?.debug(`Ignoring unknown file: ${filename}`);
+      return;
+    }
 
   // Update the vault with the new data
     this.logger?.warn(`Starting sync for section ${section} from file ${filePath}`);
@@ -95,18 +95,23 @@ export class VaultSynchronizer implements EventObserver<VaultEvent>  {
     });
   }
 
-
-
   // In VaultSynchronizer.ts
 private async syncSection(section: keyof IdentityVault, filePath: string): Promise<void> {
-  try {
+
     if (!this.activeVaultId) return;
 
+    const activeVaultId = this.activeVaultId;
     // Get current vault data
-    const vault = await this.vaultStorage.get(this.activeVaultId);
+   this.vaultStorage.get(activeVaultId).then(async (vault) => {
+
+      if (!vault) {
+        this.logger?.error(`Vault with ID ${activeVaultId} not found`);
+ 
+        return;        
+      }
     
     // Read the file content
-    const content = this.filesystem.readFileSync(filePath);
+    const content = await this.filesystem.readFile(filePath);
     let parsedData: Record<string, any> = {};
     
     try {
@@ -142,19 +147,21 @@ private async syncSection(section: keyof IdentityVault, filePath: string): Promi
         return;
     }
 
-    // Save updated vault
-    this.vaultStorage.update(this.activeVaultId, vault).then(() => {
+        // Save updated vault
+    this.vaultStorage.update(activeVaultId, vault).then(() => {
         this.logger?.debug(
-          `Updated vault ${this.activeVaultId} section ${String(section)} with ${dataArray.length} items`
+          `Updated vault ${activeVaultId} section ${String(section)} with ${dataArray.length} items`
         );
     }).catch((error) => {
-      this.logger?.error(`Failed to update vault ${this.activeVaultId} section ${section}: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger?.error(`Failed to update vault ${activeVaultId} section ${section}: ${error instanceof Error ? error.message : String(error)}`);
     });
 
-  } catch (error) {
+  
+  }).catch((error: unknown) => {
     this.logger?.error(`Error syncing ${String(section)}: ${error instanceof Error ? error.message : String(error)}`);
-  }
-}
+  });
+
+ }
 
   /**
    * Seed data files from vault when changing active vault
@@ -172,7 +179,7 @@ private async syncSection(section: keyof IdentityVault, filePath: string): Promi
       
       // Check if already seeded
       const didStorePath = path.join(vaultDir, this.knownFiles.didStore);
-      if (this.filesystem.existsSync(didStorePath)) {
+      if (await this.filesystem.exists(didStorePath)) {
         this.logger?.debug(`Vault ${vaultId} already seeded, skipping`);
         this.activeVaultId = vaultId;
         return Result.success(undefined);
@@ -182,8 +189,8 @@ private async syncSection(section: keyof IdentityVault, filePath: string): Promi
       const vault = await this.vaultStorage.get(vaultId);
       
       // Ensure directory exists
-      this.filesystem.ensureDirSync(vaultDir);
- 
+      await this.filesystem.ensureDir(vaultDir);
+
       // Define paths with vault directory
       const keyStorePath = path.join(vaultDir, this.knownFiles.keyStore);
       const privateKeyStorePath = path.join(vaultDir, this.knownFiles.privateKeyStore);
@@ -203,11 +210,11 @@ private async syncSection(section: keyof IdentityVault, filePath: string): Promi
         for (const did of vault.didStore) {
           adapterData.dids[did.did] = did;
         }
-        this.filesystem.writeFileSync(didStorePath, JSON.stringify(adapterData.dids, null, 2));
+        await this.filesystem.writeFile(didStorePath, JSON.stringify(adapterData.dids, null, 2));
         this.logger?.debug(`Seeded didstore.json with ${vault.didStore.length} DIDs`);
       } else {
         // Write empty object
-        this.filesystem.writeFileSync(didStorePath, "{}");
+        await this.filesystem.writeFile(didStorePath, "{}");
       }
 
       // Map Key array to object
@@ -215,10 +222,10 @@ private async syncSection(section: keyof IdentityVault, filePath: string): Promi
         for (const key of vault.keyStore) {
           adapterData.keys[key.kid] = key;
         }
-        this.filesystem.writeFileSync(keyStorePath, JSON.stringify(adapterData.keys, null, 2));
+        await this.filesystem.writeFile(keyStorePath, JSON.stringify(adapterData.keys, null, 2));
         this.logger?.debug(`Seeded keystore.json with ${vault.keyStore.length} keys`);
       } else {
-        this.filesystem.writeFileSync(keyStorePath, "{}");
+        await this.filesystem.writeFile(keyStorePath, "{}");
       }
 
       // Map private key array to object
@@ -231,10 +238,10 @@ private async syncSection(section: keyof IdentityVault, filePath: string): Promi
             adapterData.privateKeys[keyWithAlias.alias] = keyWithAlias;
           }
         }
-        this.filesystem.writeFileSync(privateKeyStorePath, JSON.stringify(adapterData.privateKeys, null, 2));
+        await this.filesystem.writeFile(privateKeyStorePath, JSON.stringify(adapterData.privateKeys, null, 2));
         this.logger?.debug(`Seeded private-keystore.json with ${vault.privateKeyStore.length} private keys`);
       } else {
-        this.filesystem.writeFileSync(privateKeyStorePath, "{}");
+        await this.filesystem.writeFile(privateKeyStorePath, "{}");
       }
 
       // Map VCs array to object
@@ -246,10 +253,10 @@ private async syncSection(section: keyof IdentityVault, filePath: string): Promi
             adapterData.vcs[vcId] = vc;
           }
         }
-        this.filesystem.writeFileSync(vcStorePath, JSON.stringify(adapterData.vcs, null, 2));
+        await this.filesystem.writeFile(vcStorePath, JSON.stringify(adapterData.vcs, null, 2));
         this.logger?.debug(`Seeded vcstore.json with ${vault.vcStore.length} VCs`);
       } else {
-        this.filesystem.writeFileSync(vcStorePath, "{}");
+        await this.filesystem.writeFile(vcStorePath, "{}");
       }
 
       // Set active vault ID

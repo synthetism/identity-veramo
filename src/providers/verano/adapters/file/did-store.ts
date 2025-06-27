@@ -74,6 +74,8 @@ export class DIDStore extends AbstractDIDStore {
  private saveData(data: AdapterData['dids']) {
     try {
     
+      this.logger?.info(`Save data triggered for file: ${this.filePath}`);
+
       this.filesystem.writeFileSync(this.filePath, JSON.stringify(data, null, 2));
     } catch (error: unknown) {
       

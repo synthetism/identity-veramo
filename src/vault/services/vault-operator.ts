@@ -16,7 +16,6 @@ export interface VaultOptions  {
 export class VaultOperator implements IVaultOperator {
 
     constructor( 
-        private filesystem: IFileSystem,
         private vaultStorage: IVaultStorage,
         private synchronizer: VaultSynchronizer,
         private logger? : Logger,

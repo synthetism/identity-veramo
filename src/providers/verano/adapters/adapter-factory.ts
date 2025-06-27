@@ -33,9 +33,7 @@ export function createAdapters(
 ): StorageAdapters {
 
    const dynamicFs = new DynamicVaultFilesystem(filesystem, storeDir, logger);
-  
-  filesystem.ensureDirSync(storeDir);
-  
+    
   // Create paths for different stores
   const keyStorePath =  "keystore.json";
   const privateKeyStorePath = "private-keystore.json";

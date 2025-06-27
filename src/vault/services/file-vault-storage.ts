@@ -1,4 +1,4 @@
-import type { IFileSystem } from "../../../shared/filesystem/filesystem.interface";
+import type { IFileSystem } from "../../shared/filesystem/promises/filesystem.interface";
 import type { IdentityVault, IVaultStorage} from "@synet/vault-core";
 import type { Logger } from "@synet/logger";
 import lockfile from 'proper-lockfile';  // You'll n
@@ -21,21 +21,10 @@ export class FileVaultStorage implements IVaultStorage {
 
     ) {
         this.vaultPath = this.storeDir;
-        this.filesystem.ensureDirSync(this.vaultPath);        
+              
     }
 
 
-     toPersistence(entity: IdentityVault): IdentityModel {
-           
-            return {
-                id: entity.id.toString(),
-                didStore: entity.didStore ? entity.didStore.map(did => did.toString()) : [],
-                keyStore: entity.keyStore ? entity.keyStore.map(key => key.toString()) : [],
-                privateKeyStore: entity.privateKeyStore ? entity.privateKeyStore.map(key => key.toString()) : [],
-                vcStore: entity.vcStore ? entity.vcStore.map(vc => vc.toString()) : [],
-                createdAt: entity.createdAt.toISOString(), // Convert date to string
-            };
-    }
      getPath(vaultId: string): string {
 
         const vaultFile =  path.join(this.vaultPath, `${vaultId}.json`);
@@ -47,12 +36,12 @@ export class FileVaultStorage implements IVaultStorage {
         const vaultFilePath = this.getPath(vaultId);
 
         // Check if vault exists
-        if (! this.filesystem.existsSync(vaultFilePath)) {
+        if (! await this.filesystem.exists(vaultFilePath)) {
             throw new Error(`Vault with ID ${vaultId} does not exist.`);
         }
 
         // Delete the vault file
-         this.filesystem.deleteFileSync(vaultFilePath);
+        await this.filesystem.deleteFile(vaultFilePath);
     }
 
 
@@ -65,11 +54,11 @@ export class FileVaultStorage implements IVaultStorage {
         const vaultFilePath = this.getPath(vaultId);
 
         // Check if vault already exists
-        if (this.filesystem.existsSync(vaultFilePath)) {
+        if (await this.filesystem.exists(vaultFilePath)) {
             throw new Error(`Vault with ID ${vaultId} already exists`);
         }
 
-        this.filesystem.writeFileSync(vaultFilePath, JSON.stringify(vaultData, null, 2));
+        await this.filesystem.writeFile(vaultFilePath, JSON.stringify(vaultData, null, 2));
         // Write the vault data to a file
                      
     }
@@ -80,13 +69,13 @@ export class FileVaultStorage implements IVaultStorage {
              const vaultFilePath = this.getPath(vaultId);
 
             // Check if vault exists
-            if (!this.filesystem.existsSync(vaultFilePath)) {
+            if (!await this.filesystem.exists(vaultFilePath)) {
                 throw new Error(`Vault with ID ${vaultId} does not exist.`);
             }
 
             //console.log(`Retrieving vault with ID ${vaultId} from path: ${vaultFilePath}`);
 
-            const vaultJson = this.filesystem.readFileSync(vaultFilePath);
+            const vaultJson = await this.filesystem.readFile(vaultFilePath);
             return JSON.parse(vaultJson);
 
           } catch (error) {
@@ -125,8 +114,8 @@ async update(vaultId: string, vaultData: IdentityVault): Promise<void> {
     );
     
     const serialized = JSON.stringify(updatedVault, null, 2);
-    this.filesystem.writeFileSync(filePath, serialized);
-    
+    await this.filesystem.writeFile(filePath, serialized);
+
     this.logger?.debug(`Updated vault ${vaultId} at ${filePath}`);
   } catch (error) {
     this.logger?.error(`Error updating vault ${vaultId}: ${error instanceof Error ? error.message : String(error)}`);
@@ -136,7 +125,7 @@ async update(vaultId: string, vaultData: IdentityVault): Promise<void> {
    async list(): Promise<IdentityVault[]> {
 
         const vaults: IdentityVault[] = [];
-        const files =  this.filesystem.readDirSync(this.vaultPath);
+        const files = await this.filesystem.readDir(this.vaultPath);
         if (!files || files.length === 0) {
             return vaults; // Return empty array if no files found
         }
@@ -153,7 +142,20 @@ async update(vaultId: string, vaultData: IdentityVault): Promise<void> {
 
     async exists(vaultId: string): Promise<boolean> {
         const vaultFilePath = this.getPath(vaultId);
-        return this.filesystem.existsSync(vaultFilePath);
+        return this.filesystem.exists(vaultFilePath);
      }
+
+
+   toPersistence(entity: IdentityVault): IdentityModel {
+           
+            return {
+                id: entity.id.toString(),
+                didStore: entity.didStore ? entity.didStore.map(did => did.toString()) : [],
+                keyStore: entity.keyStore ? entity.keyStore.map(key => key.toString()) : [],
+                privateKeyStore: entity.privateKeyStore ? entity.privateKeyStore.map(key => key.toString()) : [],
+                vcStore: entity.vcStore ? entity.vcStore.map(vc => vc.toString()) : [],
+                createdAt: entity.createdAt.toISOString(), // Convert date to string
+            };
+    }
  }
 
