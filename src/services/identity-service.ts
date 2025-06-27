@@ -2,21 +2,19 @@ import { Result } from "@synet/patterns";
 import type { Logger } from "@synet/logger";
 import type { IDidService } from "./did-service";
 import type { IKeyService } from "./key-service";
-import type { IFileIndexer } from "../storage/indexer/file-indexer.interface";
-import type { IndexEntry } from "../storage/indexer/types";
 import type { IIdentifier, KeyMetadata, IKey, TKeyType } from "@veramo/core";
 import type { IVCService } from "./vc-service";
 import type { SynetVerifiableCredential, IdentitySubject, AuthorizationSubject } from "@synet/credentials";
 import { CredentialType } from "@synet/credentials";
-import type { IdentityFile, IdentityVault, VaultOperator } from "@synet/vault";
+import type { IdentityFile, IdentityVault, IVaultOperator } from "@synet/vault-core";
+
 
 /**
  * Identity Service Options
  */
 export interface IdentityServiceOptions {
   storeDir?: string;
-  defaultIssuerDid?: string; // Default DID to use if none provided
-  vaultOperator?: VaultOperator; // Vault operator for managing vault operations
+  vaultOperator?: IVaultOperator; // Vault operator for managing vault operations
 }
 
 /**
@@ -45,11 +43,7 @@ export class IdentityService {
       return Result.fail("Vault operator not configured");
     }
 
-    const result = await this.options.vaultOperator.use(alias);
-    if (!result.isSuccess) {
-      this.logger?.error(`Failed to use vault ${alias}: ${result.errorMessage}`);
-      return Result.fail(`Failed to use vault ${alias}: ${result.errorMessage}`, result.errorCause);
-    }
+    await this.options.vaultOperator.use(alias);
 
     this.logger?.info(`Now using vault: ${alias}`);
     return Result.success(undefined);

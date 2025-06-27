@@ -9,37 +9,18 @@ import { createId } from '@paralleldrive/cuid2'
 import { Result } from "@synet/patterns";
 import type { Logger } from "@synet/logger";
 import type { SynetVerifiableCredential, BaseCredentialSubject } from "@synet/credentials";
-import type { AbstractVCStore } from "@synet/vault-core";
-
-export interface VCServiceOptions {
-  defaultIssuerDid?: string;
-}
-
-export interface IVCService<T = unknown> {
-  issueVC<S extends Record<string, unknown>>(
-    subject: S,
-    type: string[],
-    issuerDid?: string,
-  ): Promise<Result<T>>;
-
-  verifyVC(vc: T): Promise<Result<boolean>>;
-
-  getVC(id: string): Promise<Result<T | null>>;
-
-  listVCs(): Promise<Result<T[]>>;
-
-  deleteVC(id: string): Promise<Result<boolean>>;
-}
+import type { AbstractVCStore } from "../domain/interfaces/abstract-vc-store";
+import type {IVCService, VCServiceOptions} from "../../../shared/provider";
 
 /**
  * Service for managing Verifiable Credentials with vault storage
  */
-export class VCService<T extends SynetVerifiableCredential> implements IVCService {
+export class VCService implements IVCService {
   constructor(
     private readonly agent: TAgent<
       IKeyManager & IDIDManager & ICredentialPlugin
     >,
-    private readonly storage: AbstractVCStore<SynetVerifiableCredential<BaseCredentialSubject>>,
+    private readonly storage: AbstractVCStore,
     private readonly options: VCServiceOptions = {},
     private readonly logger?: Logger,
   ) {}
@@ -62,7 +43,7 @@ export class VCService<T extends SynetVerifiableCredential> implements IVCServic
       issuanceDate?: string;
       expirationDate?: string;
     }
-  ): Promise<Result<T>> {
+  ): Promise<Result<SynetVerifiableCredential>> {
     try {
       const defaultContext = ['https://www.w3.org/2018/credentials/v1'];
       
@@ -113,7 +94,7 @@ export class VCService<T extends SynetVerifiableCredential> implements IVCServic
             credentialSubject: subject,
           },
           proofFormat: "jwt",
-        })) as T;
+        })) as SynetVerifiableCredential;
 
         // Store the credential
         const saveResult = await this.save(vc);
@@ -144,7 +125,7 @@ export class VCService<T extends SynetVerifiableCredential> implements IVCServic
   /**
    * Verify a credential
    */
-  async verifyVC(vc: T): Promise<Result<boolean>> {
+  async verifyVC(vc: SynetVerifiableCredential): Promise<Result<boolean>> {
     try {
       const result = await this.agent.verifyCredential({
         credential: vc,
@@ -166,11 +147,11 @@ export class VCService<T extends SynetVerifiableCredential> implements IVCServic
   /**
    * Retrieve a credential by ID
    */
-  async getVC(id: string): Promise<Result<T | null>> {
+  async getVC(id: string): Promise<Result<SynetVerifiableCredential | null>> {
     try {
       const alias = id.split(":").pop() || id;
       const vc = await this.storage.get(alias);
-      return Result.success(vc as T | null);
+      return Result.success(vc as SynetVerifiableCredential | null);
     } catch (error) {
       return Result.fail(
         `Error retrieving credential: ${error instanceof Error ? error.message : String(error)}`,
@@ -182,10 +163,10 @@ export class VCService<T extends SynetVerifiableCredential> implements IVCServic
   /**
    * List all stored credentials
    */
-  async listVCs(): Promise<Result<T[]>> {
+  async listVCs(): Promise<Result<SynetVerifiableCredential[]>> {
     try {
       const vcs = await this.storage.list();
-      return Result.success(vcs as T[]);
+      return Result.success(vcs as SynetVerifiableCredential[]);
     } catch (error) {
       return Result.fail(
         `Error listing credentials: ${error instanceof Error ? error.message : String(error)}`,
@@ -210,7 +191,7 @@ export class VCService<T extends SynetVerifiableCredential> implements IVCServic
     }
   }
 
-  async storeVC(vc: T): Promise<Result<void>> {
+  async storeVC(vc: SynetVerifiableCredential): Promise<Result<void>> {
     if (!vc.id) {
       return Result.fail("Credential must have an ID to be stored");
     }
@@ -229,7 +210,7 @@ export class VCService<T extends SynetVerifiableCredential> implements IVCServic
     }
   }
 
-  async save(vc: T): Promise<Result<void>> {
+  async save(vc: SynetVerifiableCredential): Promise<Result<void>> {
     try {
       const id = vc.id;
       const alias = id.split(":").pop();
@@ -243,7 +224,7 @@ export class VCService<T extends SynetVerifiableCredential> implements IVCServic
         return Result.success(undefined);
       }
 
-      await this.storage.create(alias, vc as SynetVerifiableCredential<BaseCredentialSubject>);
+      await this.storage.create(alias, vc as SynetVerifiableCredential);
 
       this.logger?.debug(`Stored credential ${id} with alias ${alias}`);
       return Result.success(undefined);
