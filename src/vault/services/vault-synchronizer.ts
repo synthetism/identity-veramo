@@ -12,7 +12,7 @@ import path from "node:path";
 import { Result } from "@synet/patterns";
 import type { EventObserver, Event } from "@synet/patterns";
 import type { IFileSystem } from "../../shared/filesystem/filesystem.interface";
-
+import chalk from "chalk";
 /**
  * VaultSynchronizer
  * 
@@ -43,7 +43,11 @@ export class VaultSynchronizer implements EventObserver<VaultEvent>  {
 
   update(event: VaultEvent): void {
     if (event.type === VaultEventType.FILE_CHANGED) {
-      this.handleFileChange(event as FileChangedEvent);
+      this.handleFileChange(event as FileChangedEvent).then(() => {
+        this.logger?.info(`Handled file change event ${chalk.bold(event.type)} path ${event.payload.filePath} with operation ${event.payload.operation} for vault ${event.payload.vaultId}`);
+      }).catch((error) => {
+        this.logger?.error(`Error handling file change event: ${error instanceof Error ? error.message : String(error)}`);
+      });
     }
   }
 
@@ -81,10 +85,14 @@ export class VaultSynchronizer implements EventObserver<VaultEvent>  {
   }
 
   // Update the vault with the new data
-  this.logger?.debug(`Starting sync for section ${section} from file ${filePath}`);
+    this.logger?.warn(`Starting sync for section ${section} from file ${filePath}`);
 
     // Update the vault with the new data
-    await this.syncSection(section, filePath);
+    this.syncSection(section, filePath).then(() => {
+      this.logger?.debug(`Successfully synced section ${section} from file ${filePath}`);
+    }).catch((error) => {
+      this.logger?.error(`Error syncing section ${section} from file ${filePath}: ${error instanceof Error ? error.message : String(error)}`);
+    });
   }
 
 
@@ -135,10 +143,14 @@ private async syncSection(section: keyof IdentityVault, filePath: string): Promi
     }
 
     // Save updated vault
-    await this.vaultStorage.update(this.activeVaultId, vault);
-    this.logger?.debug(
-      `Updated vault ${this.activeVaultId} section ${String(section)} with ${dataArray.length} items`
-    );
+    this.vaultStorage.update(this.activeVaultId, vault).then(() => {
+        this.logger?.debug(
+          `Updated vault ${this.activeVaultId} section ${String(section)} with ${dataArray.length} items`
+        );
+    }).catch((error) => {
+      this.logger?.error(`Failed to update vault ${this.activeVaultId} section ${section}: ${error instanceof Error ? error.message : String(error)}`);
+    });
+
   } catch (error) {
     this.logger?.error(`Error syncing ${String(section)}: ${error instanceof Error ? error.message : String(error)}`);
   }

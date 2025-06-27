@@ -191,10 +191,8 @@ export class IdentityService {
         this.logger?.warn(`Failed to issue identity credential: ${vcResult.errorMessage}`);
         // Continue with identity creation even if VC issuance fails
       }
-
-      this.useVault(alias);
       
-      this.logger?.debug(
+      this.logger?.info(
         `Successfully created identity "${alias}" with DID ${did.did}`,
       );
       return Result.success(undefined);
