@@ -114,6 +114,7 @@ export class FileVaultStorage implements IVaultStorage {
         ` ${updatedVault.vcStore?.length || 0} VCs`
       ); */
 
+    
       const currentVault = await this.get(vaultId);
       const updatedVault: IdentityVault = {
         ...currentVault,
@@ -121,7 +122,8 @@ export class FileVaultStorage implements IVaultStorage {
         id: currentVault.id, // Preserve the original ID
       };
 
-      console.log('currentVault:',currentVault);
+     const vault = this.toPersistence(updatedVault);
+      console.log('currentVault:',vault);
 
     const serialized = JSON.stringify(updatedVault, null, 2);
      // await this.filesystem.writeFile(filePath, serialized);
@@ -192,7 +194,7 @@ export class FileVaultStorage implements IVaultStorage {
                 keyStore: entity.keyStore ? entity.keyStore.map(key => key.toString()) : [],
                 privateKeyStore: entity.privateKeyStore ? entity.privateKeyStore.map(key => key.toString()) : [],
                 vcStore: entity.vcStore ? entity.vcStore.map(vc => vc.toString()) : [],
-                createdAt: entity.createdAt.toISOString(), // Convert date to string
+                createdAt: new Date(entity.createdAt).toISOString(), // Convert date to string
             };
     }
  }

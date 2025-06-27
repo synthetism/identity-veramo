@@ -150,7 +150,6 @@ private async processSectionUpdate(
   }
   // Create targeted update
   const update: IdentityVault = { 
-
     id: vaultVO.value,
     [section]: dataArray 
   } as unknown as IdentityVault;
