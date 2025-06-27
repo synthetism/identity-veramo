@@ -8,7 +8,6 @@ import type { SynetVerifiableCredential, IdentitySubject, AuthorizationSubject }
 import { CredentialType } from "@synet/credentials";
 import type { IdentityFile, IdentityVault, IVaultOperator } from "@synet/vault-core";
 
-
 /**
  * Identity Service Options
  */

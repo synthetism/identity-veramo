@@ -12,6 +12,7 @@ export type { IdentityVault, IdentityFile } from "@synet/vault-core";
 export type { VaultId } from "./domain/value-objects/vault-id";
 
 import type { IFileSystem } from "../shared/filesystem/promises/filesystem.interface";
+import type { IFileSystem as  IFileSystemSync } from "../shared/filesystem/filesystem.interface";
 import { VaultSynchronizer } from "./services/vault-synchronizer";
 import type { IVaultOperator } from "@synet/vault-core";
 import { ObservableFileSystem } from "../shared/filesystem/observable";
@@ -31,6 +32,7 @@ export interface Vault {
  */
 export function createVault(
   filesystem: IFileSystem,
+  veramoFilesystem: IFileSystemSync,
   options: VaultOptions = {},
   logger?: Logger,
 ): Vault {
@@ -50,7 +52,7 @@ export function createVault(
   const synchronizer = new VaultSynchronizer(
       filesystem,
       vaultStorage,
-      '', // No active vault initially
+      storeDir,
       effectiveLogger.child('SYNC')
   );
 

@@ -88,7 +88,7 @@ export class FileVaultStorage implements IVaultStorage {
     }
  
   // In FileVaultStorage.ts
-async update(vaultId: string, vaultData: IdentityVault): Promise<void> {
+  async update(vaultId: string, vaultData: IdentityVault): Promise<void> {
   const filePath = this.getPath(vaultId);
   
   if (!await this.exists(vaultId)) {
@@ -97,27 +97,65 @@ async update(vaultId: string, vaultData: IdentityVault): Promise<void> {
   
   try {
     // Ensure we have all the required properties
-    const currentVault = await this.get(vaultId);
-    const updatedVault: IdentityVault = {
-      ...currentVault,
-      ...vaultData,
-      id: currentVault.id, // Preserve the original ID
-    };
+
     
     // Log what we're updating
-    this.logger?.debug(
-      `Updating vault ${vaultId} with:` +
-      ` ${updatedVault.didStore?.length || 0} DIDs,` +
-      ` ${updatedVault.keyStore?.length || 0} keys,` +
-      ` ${updatedVault.privateKeyStore?.length || 0} private keys,` +
-      ` ${updatedVault.vcStore?.length || 0} VCs`
-    );
-    
-    const serialized = JSON.stringify(updatedVault, null, 2);
+   
+    /* const serialized = JSON.stringify(updatedVault, null, 2);
     await this.filesystem.writeFile(filePath, serialized);
 
-    this.logger?.debug(`Updated vault ${vaultId} at ${filePath}`);
-  } catch (error) {
+    await lockfile.unlock(filePath); */
+
+     /*   this.logger?.debug(
+        `Updating vault ${vaultId} with:` +
+        ` ${updatedVault.didStore?.length || 0} DIDs,` +
+        ` ${updatedVault.keyStore?.length || 0} keys,` +
+        ` ${updatedVault.privateKeyStore?.length || 0} private keys,` +
+        ` ${updatedVault.vcStore?.length || 0} VCs`
+      ); */
+
+      const currentVault = await this.get(vaultId);
+      const updatedVault: IdentityVault = {
+        ...currentVault,
+        ...vaultData,
+        id: currentVault.id, // Preserve the original ID
+      };
+
+      console.log('currentVault:',currentVault);
+
+    const serialized = JSON.stringify(updatedVault, null, 2);
+     // await this.filesystem.writeFile(filePath, serialized);
+
+     // this.logger?.debug(`Updated vault ${vaultId} at ${filePath}`);
+
+   lockfile.lock(filePath,{
+      retries: 10,
+      stale: 10000, // 10 seconds
+    })
+    .then((release) => {
+    
+        this.logger?.debug(
+        `Updating vault ${vaultId} with:` +
+        ` ${updatedVault.didStore?.length || 0} DIDs,` +
+        ` ${updatedVault.keyStore?.length || 0} keys,` +
+        ` ${updatedVault.privateKeyStore?.length || 0} private keys,` +
+        ` ${updatedVault.vcStore?.length || 0} VCs`
+      );
+
+        //const serialized = JSON.stringify(updatedVault, null, 2);
+        this.filesystem.writeFile(filePath, serialized);
+
+        this.logger?.debug(`Updated vault ${vaultId} at ${filePath}`);
+        return release();
+
+    }).catch((e) => {
+    // either lock could not be acquired
+    // or releasing it failed
+        console.error(e)
+    })  
+
+
+   } catch (error) {
     this.logger?.error(`Error updating vault ${vaultId}: ${error instanceof Error ? error.message : String(error)}`);
     throw new Error(`Failed to update vault ${vaultId}: ${error instanceof Error ? error.message : String(error)}`);
   }

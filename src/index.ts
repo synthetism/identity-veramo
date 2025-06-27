@@ -29,6 +29,7 @@ export enum StorageType {
   CLOUD = "cloud",
 }
 import {createVeramoProvider} from "./providers/verano";
+import { MemFileSystem } from "./shared/filesystem/memory";
 
 
 
@@ -43,17 +44,18 @@ export function createIdentityService(
   const effectiveLogger = logger || getNullLogger();
   const storeDir = options.storeDir || path.join(os.homedir(), ".synet");
   const filesystemAsync = new FileSystemAsync();
-  const filesystem = new FileSystemSync();
+  const veramoFilesystem = new FileSystemSync();
 
   const services = createVeramoProvider(
     { storeDir: storeDir },
-    filesystem,
+    veramoFilesystem,
     effectiveLogger.child('Veramo'),
   );
 
   // Create vault system
   const vault = createVault(
     filesystemAsync,
+    veramoFilesystem,
     {
       storeDir: storeDir
     },
@@ -84,8 +86,8 @@ export function createVCService(
 ): IVCService {
   const effectiveLogger = logger || getNullLogger();
   const storeDir = options.storeDir || path.join(os.homedir(), ".synet");      
-  const filesystem = new FileSystemSync();
- 
+  const filesystem = new MemFileSystem();
+
   const services = createVeramoProvider(
     { storeDir: storeDir },
     filesystem,

@@ -13,6 +13,7 @@ import { Result } from "@synet/patterns";
 import type { EventObserver, Event } from "@synet/patterns";
 import type { IFileSystem } from "../../shared/filesystem/promises/filesystem.interface";
 import chalk from "chalk";
+import { VaultId } from "../domain/value-objects/vault-id";
 /**
  * VaultSynchronizer
  * 
@@ -42,6 +43,7 @@ export class VaultSynchronizer implements EventObserver<VaultEvent>  {
   }
 
   update(event: VaultEvent): void {
+    
     if (event.type === VaultEventType.FILE_CHANGED) {
       this.handleFileChange(event as FileChangedEvent).then(() => {
         this.logger?.info(`Handled file change event ${chalk.bold(event.type)} path ${event.payload.filePath} with operation ${event.payload.operation} for vault ${event.payload.vaultId}`);
@@ -87,81 +89,105 @@ export class VaultSynchronizer implements EventObserver<VaultEvent>  {
   // Update the vault with the new data
     this.logger?.warn(`Starting sync for section ${section} from file ${filePath}`);
 
-    // Update the vault with the new data
-    this.syncSection(section, filePath).then(() => {
+    //await this.syncSection(section, filePath);
+    //Update the vault with the new data
+   this.syncSection(section, filePath).then(() => {
       this.logger?.debug(`Successfully synced section ${section} from file ${filePath}`);
     }).catch((error) => {
       this.logger?.error(`Error syncing section ${section} from file ${filePath}: ${error instanceof Error ? error.message : String(error)}`);
     });
   }
 
-  // In VaultSynchronizer.ts
+  
+// Add this property to your VaultSynchronizer class
+private updateQueues: Record<string, Promise<void>> = {};
+
 private async syncSection(section: keyof IdentityVault, filePath: string): Promise<void> {
-
-    if (!this.activeVaultId) return;
-
-    const activeVaultId = this.activeVaultId;
-    // Get current vault data
-   this.vaultStorage.get(activeVaultId).then(async (vault) => {
-
+  if (!this.activeVaultId) return;
+  const activeVaultId = this.activeVaultId;
+  
+  // Initialize queue for this vault if it doesn't exist
+  if (!this.updateQueues[activeVaultId]) {
+    this.updateQueues[activeVaultId] = Promise.resolve();
+  }
+  
+  // Add this update to the queue for sequential processing
+  this.updateQueues[activeVaultId] = this.updateQueues[activeVaultId].then(async () => {
+    try {
+      // Get the most current vault data
+      const vault = await this.vaultStorage.get(activeVaultId);
       if (!vault) {
         this.logger?.error(`Vault with ID ${activeVaultId} not found`);
- 
-        return;        
-      }
-    
-    // Read the file content
-    const content = await this.filesystem.readFile(filePath);
-    let parsedData: Record<string, any> = {};
-    
-    try {
-      parsedData = JSON.parse(content);
-    } catch (e) {
-      this.logger?.error(`Failed to parse ${section} data: ${e}`);
-      return;
-    }
-
-    // Convert object to array for storage
-    const dataArray = Object.values(parsedData);
-    
-    this.logger?.debug(
-      `Syncing ${dataArray.length} items from ${section} to vault ${this.activeVaultId}`
-    );
-    
-    // Update the vault section with the correct type
-    switch(section) {
-      case 'didStore':
-        vault.didStore = dataArray;
-        break;
-      case 'keyStore':
-        vault.keyStore = dataArray;
-        break;
-      case 'privateKeyStore':
-        vault.privateKeyStore = dataArray;
-        break;
-      case 'vcStore':
-        vault.vcStore = dataArray;
-        break;
-      default:
-        this.logger?.warn(`Unknown section: ${section}`);
         return;
+      }
+      
+      // Read the file content
+      const content = await this.filesystem.readFile(filePath);
+      if (!content) {
+        this.logger?.warn(`File ${filePath} is empty, skipping sync for section ${section}`);
+        return;
+      }
+      
+      // Parse the file content
+      let parsedData: Record<string, any> = {};
+      try {
+        parsedData = JSON.parse(content);
+      } catch (e) {
+        this.logger?.error(`Failed to parse ${section} data: ${e}`);
+        return;
+      }
+      
+      // Convert object to array for storage
+      const dataArray = Object.values(parsedData);
+      this.logger?.debug(
+        `Syncing ${dataArray.length} items from ${section} to vault ${activeVaultId}`
+      );
+      
+      // Create a partial update with just the changed section
+      const partialUpdate: Partial<IdentityVault> = {
+        id: VaultId.create(activeVaultId).value,
+      };
+      
+      // Set only the specific section that changed
+      switch(section) {
+        case 'didStore':
+          partialUpdate.didStore = dataArray;
+          break;
+        case 'keyStore':
+          partialUpdate.keyStore = dataArray;
+          break;
+        case 'privateKeyStore':
+          partialUpdate.privateKeyStore = dataArray;
+          break;
+        case 'vcStore':
+          partialUpdate.vcStore = dataArray;
+          break;
+        default:
+          this.logger?.warn(`Unknown section: ${section}`);
+          return;
+      }
+      
+      // Update only the specific section in the storage
+      await this.vaultStorage.update(activeVaultId, partialUpdate as IdentityVault);
+      
+      this.logger?.debug(
+        `Updated vault ${activeVaultId} section ${String(section)} with ${dataArray.length} items`
+      );
+    } catch (error) {
+      this.logger?.error(
+        `Error syncing ${String(section)}: ${error instanceof Error ? error.message : String(error)}`
+      );
+      throw error; // Rethrow to maintain promise rejection chain
     }
-
-        // Save updated vault
-    this.vaultStorage.update(activeVaultId, vault).then(() => {
-        this.logger?.debug(
-          `Updated vault ${activeVaultId} section ${String(section)} with ${dataArray.length} items`
-        );
-    }).catch((error) => {
-      this.logger?.error(`Failed to update vault ${activeVaultId} section ${section}: ${error instanceof Error ? error.message : String(error)}`);
-    });
-
-  
-  }).catch((error: unknown) => {
-    this.logger?.error(`Error syncing ${String(section)}: ${error instanceof Error ? error.message : String(error)}`);
+  }).catch(error => {
+    // Catch and log errors from the queue chain
+    this.logger?.error(`Queue processing error for vault ${activeVaultId}: ${error}`);
   });
+  
+  // Wait for this update to complete
+  return this.updateQueues[activeVaultId];
+}
 
- }
 
   /**
    * Seed data files from vault when changing active vault
@@ -257,8 +283,7 @@ private async syncSection(section: keyof IdentityVault, filePath: string): Promi
         this.logger?.debug(`Seeded vcstore.json with ${vault.vcStore.length} VCs`);
       } else {
         await this.filesystem.writeFile(vcStorePath, "{}");
-      }
-
+     }
       // Set active vault ID
       this.activeVaultId = vaultId;
       return Result.success(undefined);
