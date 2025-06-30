@@ -8,7 +8,7 @@ import { VaultOperator } from "./services/vault-operator";
 
 // Export types
 
-export type { IdentityVault, IdentityFile } from "@synet/vault-core";
+export type { IdentityVault } from "@synet/vault-core";
 export type { VaultId } from "./domain/value-objects/vault-id";
 
 import type { IFileSystem } from "../shared/filesystem/promises/filesystem.interface";

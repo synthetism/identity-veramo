@@ -5,7 +5,7 @@ import { Identity } from "@synet/identity-core";
 import type { IVCService, IKeyService, IDidService } from "../shared/provider";
 import type { SynetVerifiableCredential, IdentitySubject } from "@synet/credentials";
 import { CredentialType } from "@synet/credentials";
-import type { IdentityFile, IdentityVault, IVaultOperator } from "@synet/vault-core";
+import type {  IdentityVault, IVaultOperator } from "@synet/vault-core";
 import { VaultId } from "@synet/vault-core";
 //import { IdentityUnit } from "../domain/value-objects/identity";
 /**
@@ -123,7 +123,7 @@ export class IdentityService {
         );
       }
   
-      const { publicKeyHex, privateKeyHex} = keyResult.value;
+      const { publicKeyHex, privateKeyHex, type } = keyResult.value;
 
      const params = {
         alias: alias,
@@ -152,6 +152,9 @@ export class IdentityService {
         identity: identityResult.value,
         keyStore: [keyResult.value],
         didStore: [didResult.value],
+        vcStore: [vc],
+        privateKeyStore: [], 
+        wgKeyStore: [], // Optional, can be managed separately
         createdAt: new Date(),
       };
 
