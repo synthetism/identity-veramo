@@ -18,7 +18,6 @@ import os from "node:os";
 import { createVault, type Vault } from "./vault";
 
 // Export file system implementations
-export * from "./services/vc-service";
 export * from "./services/identity-service";
 
 export type { IIdentifier, IKey, DIDDocument, W3CVerifiableCredential, VerifiableCredential, IssuerType } from "@veramo/core";

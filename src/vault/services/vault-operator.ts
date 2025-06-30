@@ -51,10 +51,10 @@ export class VaultOperator implements IVaultOperator {
         this.synchronizer.setActiveVault(vaultId);
               
         // Seed files if needed (can be improved - synchronizer could listen for vault changes)
-        const seedResult = await this.synchronizer.seedFilesFromVault(vaultId);
+       /*  const seedResult = await this.synchronizer.seedFilesFromVault(vaultId);
         if (seedResult.isFailure) {
             return Result.fail(`Failed to initialize vault: ${seedResult.errorMessage}`);
-        }
+        } */
         
         this.logger?.info(`Now using vault: ${vaultId}`);
         return Result.success(undefined);
