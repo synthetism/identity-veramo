@@ -3,14 +3,10 @@ import type { IVaultStorage, IVaultOperator } from "@synet/vault-core";
 import { vaultEventService }  from "@synet/vault-core";
 
 import { Result } from "@synet/patterns";
-import type { IdentityVault } from "@synet/vault-core";
+import { IdentityVault } from "@synet/vault-core";
 import { VaultId } from "../domain/value-objects/vault-id";
 import type { VaultSynchronizer } from "./vault-synchronizer";
 import type { IFileSystem } from "../../shared/filesystem/filesystem.interface";
-
-export interface VaultOptions  { 
-  storeDir?: string; // Directory to store vault data
-}
 
 
 export class VaultOperator implements IVaultOperator {
@@ -70,32 +66,20 @@ export class VaultOperator implements IVaultOperator {
    */
   async createNew(id: string): Promise<Result<void>> {
     try {
-      const vaultIdResult = VaultId.create(id);
 
-      if (!vaultIdResult.isSuccess) {
-        this.logger?.error(`Failed to create vault: ${vaultIdResult.errorMessage}`);
-        return Result.fail(vaultIdResult.errorMessage || 'Failed to create vault due to unknown error');
+      const vaultResult = IdentityVault.createNew({ id });
+    
+
+      if (!vaultResult.isSuccess) {
+        this.logger?.error(`Failed to create vault: ${vaultResult.errorMessage}`);
+        return Result.fail(vaultResult.errorMessage || 'Failed to create vault due to unknown error');
       } 
 
-      const vaultId = vaultIdResult.value.toString();
-      
-      // Check if vault already exists
-      if (await this.vaultStorage.exists(vaultId)) {
-        return Result.fail(`Vault with ID ${vaultId} already exists`);
-      }
-      
-      // Create an empty vault structure
-      const emptyVault: IdentityVault = {
-        id: vaultIdResult.value,
-        didStore: [],
-        keyStore: [],
-        privateKeyStore: [],
-        vcStore: [],
-        createdAt: new Date(),
-      };
-      
-      await this.vaultStorage.create(vaultId, emptyVault);  
-      
+      const vault = vaultResult.value;
+      const vaultId = vault.id.toString();
+
+      await this.vaultStorage.create(vaultId, vault);  
+
       this.logger?.info(`Created new vault: ${vaultId}`);
       return Result.success(undefined);
     } catch (error: unknown) {

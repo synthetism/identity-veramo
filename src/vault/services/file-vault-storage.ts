@@ -1,5 +1,5 @@
 import type { IAsyncFileSystem } from "@synet/patterns/fs/promises";
-import type { IdentityVault, IVaultStorage} from "@synet/vault-core";
+import  { IdentityVault, type  IVaultStorage} from "@synet/vault-core";
 import { VaultId } from "@synet/vault-core";
 import type { Logger } from "@synet/logger";
 import { Result } from "@synet/patterns";
@@ -21,89 +21,11 @@ interface IdentityVaultModel {
 }
 
 
-export class VaultMapper implements Mapper<IdentityVault, IdentityVaultModel> {
-  /**
-   * Maps from database record to domain entity
-   */
-   toDomain(model: IdentityVaultModel): Result<IdentityVault> {
-
-       const vaultIdResult = VaultId.create(model.id);
-        if (!vaultIdResult.isSuccess) {
-            throw new Error(`Invalid vault ID: ${vaultIdResult.errorMessage}`);
-        }
-
-        let identity: Identity | undefined;
-        if (model.identity) {
-
-            const data = JSON.parse(model.identity);
-            console.log('Deserializing identity data:', data);
-            
-            // Check if it's already in the ValueObject format (with props)
-            if (data) {
-            
-
-                const identityResult = Identity.create({
-                    alias: data.alias,
-                    did: data.did,
-                    kid: data.kid,
-                    publicKeyHex: data.publicKeyHex,
-                    privateKeyHex: data.privateKeyHex,
-                    provider: data.provider,
-                    credential: data.credential,
-                    metadata: data.metadata,
-                    createdAt: data.createdAt ? new Date(data.createdAt) : undefined,
-                    version: data.version
-                });
-                
-                if (!identityResult.isSuccess) {
-                    throw new Error(`Failed to recreate Identity: ${identityResult.errorMessage}`);
-                }
-                identity = identityResult.value;
-                
-            }  else {
-
-              throw new VError({
-                name: 'InvalidIdentityError',
-                cause: new Error(`Invalid identity data for vault ID ${model.id}`),
-                info: {
-                  vaultId: model.id,
-                },
-               }, `Vault with id ${model.id} data does not contain valid identity information.`);
-           
-            }            
-        }
-
-        return Result.success({
-            id: vaultIdResult.value,
-            identity,
-            didStore: model.didStore ? model.didStore.map(did => JSON.parse(did)) : [],
-            keyStore: model.keyStore ? model.keyStore.map(key => JSON.parse(key)) : [],
-            privateKeyStore: model.privateKeyStore ? model.privateKeyStore.map(key => JSON.parse(key)) : [],
-            vcStore: model.vcStore ? model.vcStore.map(vc => JSON.parse(vc)) : [],
-            createdAt: new Date(model.createdAt),
-        });
-    }
-
-   toPersistence(entity: IdentityVault): IdentityVaultModel {
-           
-          return {
-              id: entity.id.toString(),
-              identity: entity.identity ? JSON.stringify(entity.identity) : undefined,
-              didStore: entity.didStore ? entity.didStore.map(did => did.toString()) : [],
-              keyStore: entity.keyStore ? entity.keyStore.map(key => key.toString()) : [],
-              privateKeyStore: entity.privateKeyStore ? entity.privateKeyStore.map(key => key.toString()) : [],
-              vcStore: entity.vcStore ? entity.vcStore.map(vc => vc.toString()) : [],
-              createdAt: new Date(entity.createdAt).toISOString(), // Convert date to string
-          };
-    }
-
-}
-
 
 
 export class FileVaultStorage implements IVaultStorage {
     private readonly vaultPath: string;
-    private readonly mapper: VaultMapper;
+
     constructor(
         private storeDir: string,
         private filesystem: IAsyncFileSystem,
@@ -112,7 +34,6 @@ export class FileVaultStorage implements IVaultStorage {
     ) {
         this.vaultPath = this.storeDir;
 
-        this.mapper = new VaultMapper();
               
     }
 
@@ -141,8 +62,8 @@ export class FileVaultStorage implements IVaultStorage {
 
     async create(vaultId:string, identityVault: IdentityVault): Promise<void> {
 
-        const vaultData = this.mapper.toPersistence(identityVault);
-        
+        const vaultData = identityVault.toJSON();
+
         const vaultFilePath = this.getPath(vaultId);
 
         // Check if vault already exists
@@ -172,10 +93,9 @@ export class FileVaultStorage implements IVaultStorage {
 
             const vaultJson = await this.filesystem.readFile(vaultFilePath);
             console.log(`Read vault JSON (length: ${vaultJson.length}):`, `${vaultJson.substring(0, 100)}...`);
-            
-            const persistedData: IdentityVaultModel = JSON.parse(vaultJson);
 
-            const result = this.mapper.toDomain(persistedData);
+
+            const result = IdentityVault.fromJSON(vaultJson);
 
             if( !result.isSuccess) {
                 throw new VError({
@@ -207,17 +127,29 @@ export class FileVaultStorage implements IVaultStorage {
   }
   
   try {
-    const currentVault = await this.get(vaultId);
-    const updatedVault: IdentityVault = {
+  
+   const currentVault = await this.get(vaultId);
+    const updatedVaultResult = IdentityVault.create({
       ...currentVault,
       ...vaultData,
-      id: currentVault.id, // Preserve the original ID
-    };
+      id: currentVault.id.toString(), // Preserve the original ID
+    });
 
-    const vault = this.mapper.toPersistence(updatedVault);
-    console.log('currentVault:', vault);
+    if(updatedVaultResult.isFailure) {
+      throw new VError({
+        name: 'InvalidVaultDataError',
+        cause: updatedVaultResult.errorCause,
+        info: {
+          vaultId,
+        },
+      }, `Failed to convert vault data: ${updatedVaultResult.errorMessage}`); 
+    }
 
-    const serialized = JSON.stringify(vault, null, 2);
+    const updatedVault = updatedVaultResult.value;
+
+    console.log('currentVault:', currentVault);
+
+    const serialized = JSON.stringify(currentVault, null, 2);
 
     this.logger?.debug(
       `Updating vault ${vaultId} with:` +
