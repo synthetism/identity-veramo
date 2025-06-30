@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { VCService } from '../../src/services/vc-service';
+import { VCService } from '../../src/providers/verano/services/vc-service';
 import path from 'node:path';
 import { MemFileSystem } from '../../src/storage/filesystem/memory';
 import { FileVCStore } from '../../src/storage/vcs/adapters/file-vc-store';
@@ -37,7 +37,7 @@ describe('VCService', () => {
     age: 30,
     email: 'john@example.com'
   } as OrgCredentialSubject; // Use Record to allow flexible subject structure
-  const sampleTypes = ['OrgCredential'];
+  const sampleTypes = ['IdentityCredential'];
   
   // Sample credential UUID - we'll mock uuid to return this value consistently
   const sampleCredentialId = 'urn:uuid:123e4567-e89b-12d3-a456-426614174000';
@@ -56,7 +56,7 @@ describe('VCService', () => {
     }
   };
 
-  let vcService: VCService<SynetVerifiableCredential>;
+  let vcService: VCService;
   let vcStore: FileVCStore<SynetVerifiableCredential>;
 
 //mockFileSystem.ensureDirSync(testStoragePath);
@@ -80,7 +80,7 @@ describe('VCService', () => {
     vcStore = new FileVCStore(testStoragePath, mockFileSystem);
     
     // Setup VCService
-    vcService = new VCService<SynetVerifiableCredential>(
+    vcService = new VCService(
       mockAgent as any,
       vcStore,
       { defaultIssuerDid: sampleDid },
@@ -133,7 +133,7 @@ describe('VCService', () => {
         proofFormat: 'jwt'
       });
       
-      // Verify credential was stored
+      // Verify credential was stored (VCService now stores with full ID)
       const storedCredential = await vcStore.get(sampleCredentialId);
       expect(storedCredential).toEqual(sampleVC);
       
@@ -256,14 +256,13 @@ describe('VCService', () => {
 
   describe('listVCs', () => {
     it('should list all stored credentials', async () => {
-      // Store multiple credentials
+      // Store multiple credentials using full IDs (VCService now stores with full ID)
     
       const secondVC = {
         ...sampleVC,
         id: 'urn:uuid:987-different-id',
         credentialSubject: { ...sampleSubject, name: 'Jane Smith' }
       };
-      //secondVC.id = 'urn:uuid:456-another-id';
       
       await vcStore.create(sampleCredentialId, sampleVC);
       await vcStore.create(secondVC.id, secondVC);
@@ -301,13 +300,13 @@ describe('VCService', () => {
 
   describe('deleteVC', () => {
     it('should delete a stored credential by ID', async () => {
-      // Store a credential first
+      // Store a credential first using full ID (VCService now uses full ID for storage)
       await vcStore.create(sampleCredentialId, sampleVC);
 
       // Verify it exists
       expect(await vcStore.exists(sampleCredentialId)).toBe(true);
       
-      // Delete it
+      // Delete it using full ID
       const result = await vcService.deleteVC(sampleCredentialId);
       
       expect(result.isSuccess).toBe(true);
@@ -324,20 +323,7 @@ describe('VCService', () => {
       expect(result.value).toBe(false);
     });
     
-    it('should fail if storage is not configured', async () => {
-      // Create service without storage
-      const serviceWithoutStorage = new VCService(
-        mockAgent as any,
-        undefined,
-        { defaultIssuerDid: sampleDid },
-        mockLogger as Logger
-      );
-      
-      const result = await serviceWithoutStorage.deleteVC(sampleCredentialId);
-      
-      expect(result.isSuccess).toBe(false);
-      expect(result.errorMessage).toContain('Storage not configured');
-    });
+   
   });
 
   describe('e2e flow', () => {

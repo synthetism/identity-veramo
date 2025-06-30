@@ -155,7 +155,13 @@ export class IdentityService {
         createdAt: new Date(),
       };
 
-      this.vault.updateVault(vaultEntry);
+      const updateResult = await this.vault.updateVault(vaultEntry);
+      if (!updateResult.isSuccess) {
+        return Result.fail(
+          `Failed to update vault: ${updateResult.errorMessage}`,
+          updateResult.errorCause
+        );
+      }
   
    
       this.logger?.info(
