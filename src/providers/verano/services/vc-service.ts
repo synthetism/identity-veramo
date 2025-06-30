@@ -149,8 +149,11 @@ export class VCService implements IVCService {
    */
   async getVC(id: string): Promise<Result<SynetVerifiableCredential | null>> {
     try {
-      const alias = id.split(":").pop() || id;
-      const vc = await this.storage.get(alias);
+      if (!this.storage) {
+        return Result.fail("Storage not configured");
+      }
+      
+      const vc = await this.storage.get(id);
       return Result.success(vc as SynetVerifiableCredential | null);
     } catch (error) {
       return Result.fail(
@@ -165,6 +168,10 @@ export class VCService implements IVCService {
    */
   async listVCs(): Promise<Result<SynetVerifiableCredential[]>> {
     try {
+      if (!this.storage) {
+        return Result.fail("Storage not configured");
+      }
+      
       const vcs = await this.storage.list();
       return Result.success(vcs as SynetVerifiableCredential[]);
     } catch (error) {
@@ -180,8 +187,7 @@ export class VCService implements IVCService {
    */
   async deleteVC(id: string): Promise<Result<boolean>> {
     try {
-      const alias = id.split(":").pop() || id;
-      const deleted = await this.storage.delete(alias);
+      const deleted = await this.storage.delete(id);
       return Result.success(deleted);
     } catch (error) {
       return Result.fail(
@@ -213,20 +219,19 @@ export class VCService implements IVCService {
   async save(vc: SynetVerifiableCredential): Promise<Result<void>> {
     try {
       const id = vc.id;
-      const alias = id.split(":").pop();
       
-      if (alias === undefined) {
+      if (!id) {
         return Result.fail("Invalid credential ID format");
       }
 
-      if (await this.storage.exists(alias)) {
-        this.logger?.debug(`Credential with alias ${alias} already exists, skipping save`);
+      if (await this.storage.exists(id)) {
+        this.logger?.debug(`Credential with id ${id} already exists, skipping save`);
         return Result.success(undefined);
       }
 
-      await this.storage.create(alias, vc as SynetVerifiableCredential);
+      await this.storage.create(id, vc as SynetVerifiableCredential);
 
-      this.logger?.debug(`Stored credential ${id} with alias ${alias}`);
+      this.logger?.debug(`Stored credential ${id}`);
       return Result.success(undefined);
     } catch (error) {
       return Result.fail(
