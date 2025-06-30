@@ -1,13 +1,13 @@
 import { Result } from "@synet/patterns";
 import type { Logger } from "@synet/logger";
-import type { IDidService } from "./did-service";
-import type { IKeyService } from "./key-service";
 import type { IIdentifier, KeyMetadata, IKey, TKeyType, IIdentity } from "@synet/identity-core";
-import type { IVCService } from "../shared/provider";
-import type { SynetVerifiableCredential, IdentitySubject, AuthorizationSubject } from "@synet/credentials";
+import { Identity } from "@synet/identity-core";
+import type { IVCService, IKeyService, IDidService } from "../shared/provider";
+import type { SynetVerifiableCredential, IdentitySubject } from "@synet/credentials";
 import { CredentialType } from "@synet/credentials";
 import type { IdentityFile, IdentityVault, IVaultOperator } from "@synet/vault-core";
-import { IdentityUnit } from "../domain/value-objects/identity";
+import { VaultId } from "@synet/vault-core";
+//import { IdentityUnit } from "../domain/value-objects/identity";
 /**
  * Identity Service Options
  */
@@ -35,102 +35,7 @@ export class IdentityService {
 
   }
 
-  /**
-   * Use a specific vault for identity operations
-   */
-  async useVault(alias: string): Promise<Result<void>> {
-    if (!this.vault) {
-      return Result.fail("Vault operator not configured");
-    }
-
-    await this.vault.use(alias);
-
-    this.logger?.info(`Now using vault: ${alias}`);
-    return Result.success(undefined);
-  }
-
-  /**
-   * Create a new vault
-   */
-  async createVault(alias: string): Promise<Result<void>> {
-    if (!this.vault) {
-      return Result.fail("Vault operator not configured");
-    }
-
-    const result = await this.vault.createNew(alias);
-    if (!result.isSuccess) {
-      this.logger?.error(`Failed to create vault ${alias}: ${result.errorMessage}`);
-      return Result.fail(`Failed to create vault ${alias}: ${result.errorMessage}`, result.errorCause);
-    }
-
-    this.logger?.info(`Created new vault: ${alias}`);
-    return Result.success(undefined);
-  }
-
-  /**
-   * Delete a vault
-   */
-  async deleteVault(alias: string): Promise<Result<void>> {
-
-
-    const result = await this.vault.deleteVault(alias);
-    if (!result.isSuccess) {
-      this.logger?.error(`Failed to delete vault ${alias}: ${result.errorMessage}`);
-      return Result.fail(`Failed to delete vault ${alias}: ${result.errorMessage}`, result.errorCause);
-    }
-
-    this.logger?.info(`Deleted vault: ${alias}`);
-    return Result.success(undefined);
-  }
-
-  async listVaults(): Promise<Result<IdentityVault[]>> {
-    if (!this.vault) {
-      return Result.fail("Vault operator not configured");
-    } 
-    try {
-      const vaultsResult = await this.vault.listVaults();
-
-      if(!vaultsResult.isSuccess) {
-        this.logger?.error(`Failed to list vaults: ${vaultsResult.errorMessage}`);
-        return Result.fail(`Failed to list vaults: ${vaultsResult.errorMessage}`, vaultsResult.errorCause);
-      }
-
-      const vaults = vaultsResult.value;
-
-      this.logger?.info(`Available vaults: ${vaults.join(", ")}`);
-      return Result.success(vaults);
-
-    } catch (error) {
-      this.logger?.error(`Failed to list vaults: ${error}`);
-      return Result.fail(
-        `Failed to list vaults: ${error}`,
-        error instanceof Error ? error : new Error(String(error)),
-      );
-    }
-  }
-
-  async getVault(alias: string): Promise<Result<IdentityVault>> {
-    if (!this.vault) {
-      return Result.fail("Vault operator not configured");
-    }
-    try {
-      this.logger?.debug(`Getting vault for identity "${alias}"...`);
-      const vaultResult = await this.vault.getVault(alias);
-
-      if (!vaultResult.isSuccess || !vaultResult.value) {
-        this.logger?.warn(`Vault "${alias}" not found`);
-        return Result.fail(`Vault "${alias}" not found`);
-      }
-
-      return Result.success(vaultResult.value);
-    } catch (error) {
-      this.logger?.error(`Failed to get vault: ${error}`);
-      return Result.fail(
-        `Failed to get vault: ${error}`,
-        error instanceof Error ? error : new Error(String(error)),
-      );
-    }
-  }
+ 
   /**
    * Create a complete identity with DID and keys
    */
@@ -141,7 +46,20 @@ export class IdentityService {
     try {
       this.logger?.debug(`Creating identity with alias "${alias}"...`);
 
-     const vaultResult = await this.createVault(alias);
+       const vaultIdOrError = VaultId.create(alias);
+
+      if (!vaultIdOrError.isSuccess) {
+        this.logger?.error(`Failed to create vault ID: ${vaultIdOrError.errorMessage}`);
+        return Result.fail(
+          `Failed to create vault ID: ${vaultIdOrError.errorMessage}`,
+          vaultIdOrError.errorCause,
+        );
+      }
+    
+      const vaultId = vaultIdOrError.value;
+      this.vaultId = vaultId.toString();      
+
+     const vaultResult = await this.vault.createNew(this.vaultId);
       if (!vaultResult.isSuccess) {
       return Result.fail(
         `Failed to create vault for identity: ${vaultResult.errorMessage}`,
@@ -149,7 +67,7 @@ export class IdentityService {
       );
       }
 
-      const useResult = await this.useVault(alias);
+      const useResult = await this.vault.use(this.vaultId);
       if (!useResult.isSuccess) {
         return Result.fail(
           `Failed to use vault for identity: ${useResult.errorMessage}`,
@@ -157,7 +75,7 @@ export class IdentityService {
         );
       }
       // Create a DID with the key
-      const didResult = await this.didService.create(alias);
+      const didResult = await this.didService.create(this.vaultId);
 
       if (!didResult.isSuccess || !didResult.value || !didResult.value.controllerKeyId) {
         return Result.fail(
@@ -204,10 +122,8 @@ export class IdentityService {
           keyResult.errorCause,
         );
       }
-
   
       const { publicKeyHex, privateKeyHex} = keyResult.value;
-
 
      const params = {
         alias: alias,
@@ -219,11 +135,28 @@ export class IdentityService {
         credential: vc,
       }
 
-      const identity = IdentityUnit.create(params);
-      if (!vcResult.isSuccess) {
-        this.logger?.warn(`Failed to issue identity credential: ${vcResult.errorMessage}`);
-        // Continue with identity creation even if VC issuance fails
+      const identityResult = Identity.create(params);
+
+      if(!identityResult.isSuccess) {
+        this.logger?.error(`Failed to create identity unit: ${identityResult.errorMessage}`);
+        return Result.fail(
+          `Failed to create identity unit: ${identityResult.errorMessage}`, 
+          identityResult.errorCause,
+        );
       }
+
+
+
+      const vaultEntry: IdentityVault = {
+        id: vaultId,
+        identity: identityResult.value,
+        keyStore: [keyResult.value],
+        didStore: [didResult.value],
+        createdAt: new Date(),
+      };
+
+      this.vault.updateVault(vaultEntry);
+  
    
       this.logger?.info(
         `Successfully created identity "${alias}" with DID ${did}`,
@@ -248,14 +181,14 @@ export class IdentityService {
       this.logger?.debug(`Deleting identity with alias or DID "${aliasOrDid}"...`);
 
       // Find the identity
-      const entryResult = await this.getVault(aliasOrDid);
+      const entryResult = await this.vault.getVault(aliasOrDid);
 
       if (!entryResult.isSuccess || !entryResult.value) {
         return Result.fail(`Identity "${aliasOrDid}" not found`);
       }
 
 
-      this.deleteVault(aliasOrDid);
+      this.vault.deleteVault(aliasOrDid);
 
   
       this.logger?.info(`Successfully deleted identity "${aliasOrDid}"`);
@@ -273,16 +206,16 @@ export class IdentityService {
   /**
    * List all identities
    */
-  async listIdentities(): Promise<Result<IIdentity[]>> {
+  async listIdentities(): Promise<Result<Identity[]>> {
 
-      const vaultsResult = await this.listVaults();
+      const vaultsResult = await this.vault.listVaults();
 
       if (!vaultsResult.isSuccess) {
         this.logger?.error(`Failed to list identities: ${vaultsResult.errorMessage}`);
         return Result.fail(`Failed to list identities: ${vaultsResult.errorMessage}`, vaultsResult.errorCause);
       }
 
-      const identities: IIdentity[] = [];
+      const identities: Identity[] = [];
       const vaults = vaultsResult.value;
       for (const vault of vaults) {
           if (vault.identity) {
@@ -296,7 +229,7 @@ export class IdentityService {
   /**
    * Get a single identity by alias or DID
    */
-  async getIdentity(aliasOrDid: string): Promise<Result<IIdentity>> {
+  async getIdentity(aliasOrDid: string): Promise<Result<Identity>> {
     try {
       if (!this.vault) {
          return Result.fail("Vault operator not configured");
@@ -334,15 +267,15 @@ export class IdentityService {
       );
 
       // Verify current identity exists
-      const entryResult = await this.getIdentity(currentAlias);
-      if (!entryResult.isSuccess || !entryResult.value) {
+      const identityResult = await this.getIdentity(currentAlias);
+      if (!identityResult.isSuccess || !identityResult.value) {
         return Result.fail(`Identity "${currentAlias}" not found`);
       }
 
-      const entry = entryResult.value;
+      const identity = identityResult.value;
 
       // Update DID alias
-      const didResult = await this.didService.update(entry.did, {
+      const didResult = await this.didService.update(identity.did, {
         alias: newAlias,
       });
       if (!didResult.isSuccess) {
@@ -350,9 +283,7 @@ export class IdentityService {
           `Failed to update DID alias: ${didResult.errorMessage}`,
         );
       }
-
    
-
       this.logger?.info(
         `Successfully renamed identity from "${currentAlias}" to "${newAlias}"`,
       );
@@ -371,14 +302,14 @@ export class IdentityService {
    */
   async getIdentityDetails(
     aliasOrDid: string,
-  ): Promise<Result<{ identity: IdentityFile;  keys: IKey[] }>> {
+  ): Promise<Result<{ identity: Identity;  keys: IKey[] }>> {
     try {
       this.logger?.debug(
         `Getting detailed information for identity "${aliasOrDid}"...`,
       );
 
       // Find the identity
-      const vaultResult = await this.getVault(aliasOrDid);
+      const vaultResult = await this.vault.getVault(aliasOrDid);
       if (!vaultResult.isSuccess || !vaultResult.value || !vaultResult.value.identity) {
         return Result.fail(`Identity "${aliasOrDid}" not found`);
       }

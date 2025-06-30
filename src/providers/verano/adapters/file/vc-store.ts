@@ -3,7 +3,7 @@ import type { Logger } from "@synet/logger";
 import type { AbstractVCStore } from "../../domain/interfaces/abstract-vc-store";
 import type { SynetVerifiableCredential, BaseCredentialSubject } from "@synet/credentials";
 import type { IFileSystem } from "../../../../shared/filesystem/filesystem.interface";
-import type { AdapterData } from "@synet/vault-core/dist/types";
+import type { AdapterData } from "@synet/vault-core";
 
 export class VCStore implements AbstractVCStore {
   constructor(

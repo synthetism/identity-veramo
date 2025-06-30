@@ -1,4 +1,4 @@
-import type { IFileSystem } from "../../shared/filesystem/promises/filesystem.interface";
+import type { IAsyncFileSystem } from "@synet/patterns/fs/promises";
 import type { IdentityVault, IVaultStorage} from "@synet/vault-core";
 import type { Logger } from "@synet/logger";
 import lockfile from 'proper-lockfile';  // You'll n
@@ -16,7 +16,7 @@ export class FileVaultStorage implements IVaultStorage {
     private readonly vaultPath: string;
     constructor(
         private storeDir: string,
-        private filesystem: IFileSystem,
+        private filesystem: IAsyncFileSystem,
         private logger? : Logger,
 
     ) {

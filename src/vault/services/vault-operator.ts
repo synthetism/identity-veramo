@@ -23,6 +23,20 @@ export class VaultOperator implements IVaultOperator {
 
     }
 
+   async exists  (vaultId: string): Promise<Result<boolean>> {
+      try {
+          const vaultExists = await this.vaultStorage.exists(vaultId);  
+          if (vaultExists) {
+              return Result.success(true);
+          } 
+          
+          return Result.fail(`Vault with ID ${vaultId} does not exist`);
+        
+      } catch (error: unknown) {  
+          this.logger?.error(`Error checking vault existence: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          return Result.fail(`Failed to check vault existence: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+   } 
  async use(vaultId: string): Promise<Result<void>> {
       try {
           // Check if vault exists
@@ -44,7 +58,7 @@ export class VaultOperator implements IVaultOperator {
         
         this.logger?.info(`Now using vault: ${vaultId}`);
         return Result.success(undefined);
-        
+
       } catch (error: unknown) {
           this.logger?.error(`Error using vault: ${error instanceof Error ? error.message : 'Unknown error'}`);
           return Result.fail(`Failed to use vault: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -90,7 +104,21 @@ export class VaultOperator implements IVaultOperator {
     }
   }
 
-   /**
+  async updateVault(vaultData: IdentityVault): Promise<Result<void>> {
+    try {
+      
+     const vaultId = vaultData.id.toString();
+      // Update the vault
+      await this.vaultStorage.update(vaultId, vaultData);
+      this.logger?.info(`Updated vault: ${vaultId}`);
+      return Result.success(undefined);
+    } catch (error: unknown) {
+      this.logger?.error(`Error updating vault: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return Result.fail(`Failed to update vault: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
    * Delete a vault
    */
   async deleteVault(id: string): Promise<Result<void>> {
