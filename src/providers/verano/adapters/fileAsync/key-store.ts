@@ -1,15 +1,15 @@
-import type { IKey, ManagedKeyInfo } from "@veramo/core";
-import { AbstractKeyStore } from "@veramo/key-manager";
+import type { IKey, ManagedKeyInfo } from "@synet/identity-core";
+import { AbstractKeyStore } from "@synet/vault-core";
 import VError  from "verror";
 import type { Logger } from "@synet/logger";
-import type { IFileSystem } from "../../../../shared/filesystem/promises/filesystem.interface";
+import type { IAsyncFileSystem } from "@synet/patterns/fs/promises";
 import type { AdapterData } from "@synet/vault-core";
 // File-based key store implementation
 export class KeyStore extends AbstractKeyStore {
 
 
   constructor(
-    private filesystem: IFileSystem,
+    private filesystem: IAsyncFileSystem,
     private filePath: string,
     private readonly logger?: Logger,
   ) {

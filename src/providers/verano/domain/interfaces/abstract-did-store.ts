@@ -1,9 +1,6 @@
-import type { IIdentifier } from '@veramo/core-types'
+import type { IIdentifier } from '@synet/identity-core'
 
-/**
- * An abstract class for the {@link @veramo/did-manager#DIDManager} identifier store
- * @public
- */
+
 export abstract class AbstractDIDStore {
   abstract importDID(args: IIdentifier): Promise<boolean>
   abstract getDID(args: { did: string }): Promise<IIdentifier>

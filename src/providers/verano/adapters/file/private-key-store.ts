@@ -1,13 +1,12 @@
 import {
-  AbstractPrivateKeyStore,
-  type ManagedPrivateKey,
-  type ImportablePrivateKey,
-} from "@veramo/key-manager";
+  AbstractPrivateKeyStore
+} from "@synet/vault-core"
 import crypto from "node:crypto";
 import VError  from "verror";
+import type { ManagedPrivateKey, ImportablePrivateKey  } from "@synet/identity-core";
 import type { Logger } from "@synet/logger";
-import type { IFileSystem } from "../../../../shared/filesystem/filesystem.interface";
-import type { AdapterData } from "@synet/vault-core/dist/types";
+import type { IFileSystem } from "@synet/patterns/fs";
+import type { AdapterData } from "@synet/vault-core";
 
 // File-based private key store implementation
 export class PrivateKeyStore extends AbstractPrivateKeyStore {

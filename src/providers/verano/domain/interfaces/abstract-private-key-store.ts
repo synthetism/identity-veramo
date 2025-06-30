@@ -1,4 +1,4 @@
-import type { RequireOnly, TKeyType } from '@veramo/core-types'
+import type { RequireOnly, TKeyType } from '@synet/identity-core'
 
 /**
  * Represents a private key.

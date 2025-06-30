@@ -1,14 +1,5 @@
-import type { IKey, ManagedKeyInfo } from '@veramo/core-types'
+import type { IKey, ManagedKeyInfo } from '@synet/identity-core'
 
-/**
- * This base abstract class should be extended to provide platform specific implementations that are usable by
- * {@link @veramo/key-manager#KeyManager | KeyManager}.
- *
- * Implementations of this class are used to store mappings between key IDs and their respective
- * {@link @veramo/key-manager#AbstractKeyManagementSystem | AbstractKeyManagementSystem} implementations.
- *
- * @public
- */
 export abstract class AbstractKeyStore {
   abstract importKey(args: Partial<IKey>): Promise<boolean>
 

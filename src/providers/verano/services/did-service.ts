@@ -41,7 +41,7 @@ export class DidService implements IDidService {
         },
       });
     
-      debug('Created', didData.did);
+      
       this.logger?.debug(`Created DID: ${didData.did}`);
 
       return Result.success(didData);

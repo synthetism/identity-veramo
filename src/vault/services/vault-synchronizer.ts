@@ -1,17 +1,17 @@
-import { fileSystemChangeEmitter, type FileChangeEvent, type AdapterData } from "@synet/vault-core";
 import type { 
   IdentityVault, 
-  ManagedPrivateKey, 
   IVaultStorage,
   VaultEvent, 
   FileChangedEvent,
+  AdapterData
 } from "@synet/vault-core";
+import type {ManagedPrivateKey} from "@synet/identity-core";
 import { vaultEventService, VaultEventType } from "@synet/vault-core";
 import type { Logger } from "@synet/logger";
 import path from "node:path";
 import { Result } from "@synet/patterns";
 import type { EventObserver, Event } from "@synet/patterns";
-import type { IFileSystem } from "../../shared/filesystem/promises/filesystem.interface";
+import type { IAsyncFileSystem } from "@synet/patterns/fs/promises";
 import chalk from "chalk";
 import { VaultId } from "../domain/value-objects/vault-id";
 /**
@@ -31,16 +31,14 @@ export class VaultSynchronizer implements EventObserver<VaultEvent>  {
   };
 
   constructor(
-    private filesystem: IFileSystem,
+    private filesystem: IAsyncFileSystem,
     private vaultStorage: IVaultStorage,   
     private baseDir: string,
     private logger?: Logger
   ) {
-    // Subscribe to filesystem events
-    //fileSystemChangeEmitter.onFileChange(this.handleFileChange.bind(this));
-    //this.logger?.debug('VaultSynchronizer initialized');
-    const eventEmitter = vaultEventService.getEventEmitter();
-    eventEmitter.subscribe(VaultEventType.FILE_CHANGED, this);
+
+    //const eventEmitter = vaultEventService.getEventEmitter();
+    //eventEmitter.subscribe(VaultEventType.FILE_CHANGED, this);
 
   }
 

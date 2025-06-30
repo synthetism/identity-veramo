@@ -46,12 +46,6 @@ export interface IFileSystem {
   ensureDirSync(path: string): void;
 
   /**
-   * Synchronously ensure a directory exists
-   * @param path Directory path
-   */
-  ensureDirSync(path: string): void;
-
-  /**
    * Set file permissions
    * @param path File path
    * @param mode Permission mode (octal)

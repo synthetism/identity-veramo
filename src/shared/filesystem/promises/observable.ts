@@ -1,4 +1,3 @@
-// @synet/identity/src/shared/filesystem/observable.interface.ts
 import { EventEmitter, type Event } from '@synet/patterns';
 import type { IFileSystem } from "./filesystem.interface";
 
@@ -42,26 +41,40 @@ export class ObservableFileSystem implements IFileSystem {
     return !this.events || this.events.includes(eventType);
   }
 
-  existsSync(filename: string): boolean {
-    const result = this.baseFilesystem.existsSync(filename);
-    
-    if (this.shouldEmit(FilesystemEventTypes.EXISTS)) {
-      this.eventEmitter.emit({
-        type: FilesystemEventTypes.EXISTS,
-        data: {
-          filePath: filename,
-          operation: 'exists',
-          result
-        }
-      });
+  async exists(filename: string): Promise<boolean> {
+    try {
+      const result = await this.baseFilesystem.exists(filename);
+      
+      if (this.shouldEmit(FilesystemEventTypes.EXISTS)) {
+        this.eventEmitter.emit({
+          type: FilesystemEventTypes.EXISTS,
+          data: {
+            filePath: filename,
+            operation: 'exists',
+            result
+          }
+        });
+      }
+      
+      return result;
+    } catch (error) {
+      if (this.shouldEmit(FilesystemEventTypes.EXISTS)) {
+        this.eventEmitter.emit({
+          type: FilesystemEventTypes.EXISTS,
+          data: {
+            filePath: filename,
+            operation: 'exists',
+            error: error as Error
+          }
+        });
+      }
+      throw error;
     }
-    
-    return result;
   }
 
-  readFileSync(filename: string): string {
+  async readFile(filename: string): Promise<string> {
     try {
-      const content = this.baseFilesystem.readFileSync(filename);
+      const content = await this.baseFilesystem.readFile(filename);
       
       if (this.shouldEmit(FilesystemEventTypes.READ)) {
         this.eventEmitter.emit({
@@ -90,9 +103,9 @@ export class ObservableFileSystem implements IFileSystem {
     }
   }
 
-  writeFileSync(filename: string, data: string): void {
+  async writeFile(filename: string, data: string): Promise<void> {
     try {
-      this.baseFilesystem.writeFileSync(filename, data);
+      await this.baseFilesystem.writeFile(filename, data);
 
       if (this.shouldEmit(FilesystemEventTypes.WRITE)) {
         this.eventEmitter.emit({
@@ -119,9 +132,9 @@ export class ObservableFileSystem implements IFileSystem {
     }
   }
 
-  deleteFileSync(filename: string): void {
+  async deleteFile(filename: string): Promise<void> {
     try {
-      this.baseFilesystem.deleteFileSync(filename);
+      await this.baseFilesystem.deleteFile(filename);
 
       if (this.shouldEmit(FilesystemEventTypes.DELETE)) {
         this.eventEmitter.emit({
@@ -147,9 +160,9 @@ export class ObservableFileSystem implements IFileSystem {
     }
   }
   
-  deleteDirSync(dirPath: string): void {
+  async deleteDir(dirPath: string): Promise<void> {
     try {
-      this.baseFilesystem.deleteDirSync(dirPath);
+      await this.baseFilesystem.deleteDir(dirPath);
 
       if (this.shouldEmit(FilesystemEventTypes.DELETE_DIR)) {
         this.eventEmitter.emit({
@@ -175,9 +188,9 @@ export class ObservableFileSystem implements IFileSystem {
     }
   }
 
-  ensureDirSync(dirPath: string): void {
+  async ensureDir(dirPath: string): Promise<void> {
     try {
-      this.baseFilesystem.ensureDirSync(dirPath);
+      await this.baseFilesystem.ensureDir(dirPath);
 
       if (this.shouldEmit(FilesystemEventTypes.ENSURE_DIR)) {
         this.eventEmitter.emit({
@@ -203,9 +216,9 @@ export class ObservableFileSystem implements IFileSystem {
     }
   }
 
-  readDirSync(dirPath: string): string[] {
+  async readDir(dirPath: string): Promise<string[]> {
     try {
-      const result = this.baseFilesystem.readDirSync(dirPath);
+      const result = await this.baseFilesystem.readDir(dirPath);
 
       if (this.shouldEmit(FilesystemEventTypes.READ_DIR)) {
         this.eventEmitter.emit({
@@ -234,9 +247,9 @@ export class ObservableFileSystem implements IFileSystem {
     }
   }
 
-  chmodSync(path: string, mode: number): void {
+  async chmod(path: string, mode: number): Promise<void> {
     try {
-      this.baseFilesystem.chmodSync(path, mode);
+      await this.baseFilesystem.chmod(path, mode);
 
       if (this.shouldEmit(FilesystemEventTypes.CHMOD)) {
         this.eventEmitter.emit({
@@ -260,6 +273,14 @@ export class ObservableFileSystem implements IFileSystem {
         });
       }
       throw error;
+    }
+  }
+
+  async clear?(dirPath: string): Promise<void> {
+    if (this.baseFilesystem.clear) {
+      await this.baseFilesystem.clear(dirPath);
+      // We could emit a clear event, but it's not in our enum
+      // Could be added if needed
     }
   }
 }

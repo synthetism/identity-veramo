@@ -33,7 +33,6 @@ import type { IFileSystem } from "../../shared/filesystem/filesystem.interface";
 import { MemFileSystem } from "../../shared/filesystem/memory";
 
 import type { ProviderServices } from "../../shared/provider";
-import { ObservableFileSystem } from "../../shared/filesystem/observable";
 
 // Export file system implementations
 export * from "./services/vc-service";

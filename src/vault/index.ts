@@ -15,7 +15,6 @@ import type { IFileSystem } from "../shared/filesystem/promises/filesystem.inter
 import type { IFileSystem as  IFileSystemSync } from "../shared/filesystem/filesystem.interface";
 import { VaultSynchronizer } from "./services/vault-synchronizer";
 import type { IVaultOperator } from "@synet/vault-core";
-import { ObservableFileSystem } from "../shared/filesystem/observable";
 import { fileSystemChangeEmitter, type FileChangeEvent, type AdapterData } from "@synet/vault-core";
 
 

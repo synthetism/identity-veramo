@@ -1,8 +1,8 @@
 import { getNullLogger, type Logger } from "@synet/logger";
 
 /* Storage */
-import { NodeFileSystem as FileSystemSync } from "./shared/filesystem/filesystem";
-import { NodeFileSystem as FileSystemAsync } from "./shared/filesystem/promises/filesystem";
+import { NodeFileSystem as FileSystemSync } from "@synet/fs";
+import { NodeFileSystem as FileSystemAsync } from "@synet/fs/promises";
 
 /* Services */
 import type { IVCService } from "./shared/provider";
@@ -71,9 +71,9 @@ export function createIdentityService(
     didService,
     keyService,
     vcService,
+    vault.operator,
     {
       ...options,
-      vaultOperator: vault.operator
     },
     effectiveLogger,
   );  

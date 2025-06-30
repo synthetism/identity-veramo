@@ -1,4 +1,3 @@
-import path from "node:path";
 import type { Logger } from "@synet/logger";
 import { 
   KeyStore, 
@@ -7,13 +6,13 @@ import {
   VCStore,
 } from "./file";
 
-import type { AbstractKeyStore } from "../domain/interfaces/abstract-key-store";
-import type { AbstractPrivateKeyStore } from "../domain/interfaces/abstract-private-key-store";
-import type { AbstractDIDStore } from "../domain/interfaces/abstract-did-store";
+import type { AbstractKeyStore } from "@synet/vault-core";
+import type { AbstractPrivateKeyStore } from "@synet/vault-core";
+import type { AbstractDIDStore } from "@synet/vault-core";
 import type { AbstractVCStore } from "../domain/interfaces/abstract-vc-store";
 import type { SynetVerifiableCredential, BaseCredentialSubject } from "@synet/credentials";
-import type { IFileSystem } from "../../../shared/filesystem/filesystem.interface";
-import { DynamicVaultFilesystem } from "@synet/vault-core";
+import type { IFileSystem } from "@synet/patterns/fs";
+import { DynamicVaultFilesystem } from "../../../shared/filesystem/dynamic-filesystem";
 
 // Common interface for all adapter types
 export interface StorageAdapters {

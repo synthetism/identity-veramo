@@ -1,15 +1,15 @@
-import type { IIdentifier } from "@veramo/core";
-import { AbstractDIDStore } from "@veramo/did-manager";
+import type { IIdentifier } from "@synet/identity-core";
+import { AbstractDIDStore } from "@synet/vault-core";
 import type { Logger } from "@synet/logger";
 import VError  from "verror";
-import type { IFileSystem } from "../../../../shared/filesystem/promises/filesystem.interface";
+import type { IAsyncFileSystem } from "@synet/patterns/fs/promises";
 import type { AdapterData } from "@synet/vault-core";
 // File-based DID store implementation
 
 export class DIDStore extends AbstractDIDStore {
 
   constructor(
-    private filesystem: IFileSystem,
+    private filesystem: IAsyncFileSystem,
     private filePath: string,
     private logger?: Logger
   ) {

@@ -1,8 +1,8 @@
-import type { IIdentifier } from "@veramo/core";
-import { AbstractDIDStore } from "@veramo/did-manager";
+import type { IIdentifier } from "@synet/identity-core";
+import { AbstractDIDStore } from "@synet/vault-core";
 import type { Logger } from "@synet/logger";
 import VError  from "verror";
-import type { IFileSystem } from "../../../../shared/filesystem/filesystem.interface";
+import type { IFileSystem } from "@synet/patterns/fs";
 import type { AdapterData } from "@synet/vault-core";
 // File-based DID store implementation
 

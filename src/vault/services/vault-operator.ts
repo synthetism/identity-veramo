@@ -44,6 +44,7 @@ export class VaultOperator implements IVaultOperator {
         
         this.logger?.info(`Now using vault: ${vaultId}`);
         return Result.success(undefined);
+        
       } catch (error: unknown) {
           this.logger?.error(`Error using vault: ${error instanceof Error ? error.message : 'Unknown error'}`);
           return Result.fail(`Failed to use vault: ${error instanceof Error ? error.message : 'Unknown error'}`);

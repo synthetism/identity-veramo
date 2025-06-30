@@ -1,6 +1,6 @@
 {
   "name": "@synet/identity",
-  "version": "0.1.2-dev.9",
+  "version": "0.1.2-dev.11",
   "description": "Identity service for Synet network",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -42,10 +42,12 @@
   },
   "dependencies": {
     "@paralleldrive/cuid2": "^2.2.2",
-    "@synet/credentials": "^1.0.1-dev.2",
+    "@synet/credentials": "^1.0.2",
+    "@synet/fs": "^1.0.1",
+    "@synet/identity-core": "^0.1.1-dev.7",
     "@synet/logger": "^1.0.0",
-    "@synet/patterns": "^2.1.4",
-    "@synet/vault-core": "^0.0.1-dev.18",
+    "@synet/patterns": "^2.1.7-dev.0",
+    "@synet/vault-core": "^0.0.1-dev.27",
     "@veramo/core": "^6.0.0",
     "@veramo/credential-w3c": "^6.0.0",
     "@veramo/did-manager": "^6.0.0",

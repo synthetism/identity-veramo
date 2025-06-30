@@ -188,14 +188,14 @@ export class FileVaultStorage implements IVaultStorage {
 
    toPersistence(entity: IdentityVault): IdentityModel {
            
-            return {
-                id: entity.id.toString(),
-                didStore: entity.didStore ? entity.didStore.map(did => did.toString()) : [],
-                keyStore: entity.keyStore ? entity.keyStore.map(key => key.toString()) : [],
-                privateKeyStore: entity.privateKeyStore ? entity.privateKeyStore.map(key => key.toString()) : [],
-                vcStore: entity.vcStore ? entity.vcStore.map(vc => vc.toString()) : [],
-                createdAt: new Date(entity.createdAt).toISOString(), // Convert date to string
-            };
+          return {
+              id: entity.id.toString(),
+              didStore: entity.didStore ? entity.didStore.map(did => did.toString()) : [],
+              keyStore: entity.keyStore ? entity.keyStore.map(key => key.toString()) : [],
+              privateKeyStore: entity.privateKeyStore ? entity.privateKeyStore.map(key => key.toString()) : [],
+              vcStore: entity.vcStore ? entity.vcStore.map(vc => vc.toString()) : [],
+              createdAt: new Date(entity.createdAt).toISOString(), // Convert date to string
+          };
     }
  }
 

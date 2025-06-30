@@ -1,12 +1,17 @@
 import { Result } from "@synet/patterns";
 import type { Logger } from "@synet/logger";
 import type {
-  IKeyManager,
   IKey,
   KeyMetadata,
-  TAgent,
   TKeyType,
-} from "@veramo/core";
+  MinimalImportableKey
+} from "@synet/identity-core";
+
+import type {
+  IKeyManager,
+  TAgent,
+} from "@veramo/core-types";
+
 
 import type { IKeyService } from "../../../shared/provider";
 /**
@@ -70,6 +75,26 @@ export class KeyService implements IKeyService {
     } catch (error) {
       this.logger?.error(`Failed to delete key ${kid}: ${error}`);
       return Result.fail(`Failed to delete key: ${error}`);
+    }
+  }
+
+  async importKey(
+    args?: MinimalImportableKey | undefined
+  ): Promise<Result<IKey>> {
+    try {
+      this.logger?.debug(`Importing key of type: ${args?.type}`);
+
+      const importedKey = await this.agent.keyManagerImport(args);
+
+      this.logger?.debug(`Imported key: ${importedKey.kid}`);
+
+      return Result.success(importedKey);
+    } catch (error) {
+      this.logger?.error(`Failed to import key ${args?.kid}: ${error}`);
+      return Result.fail(
+        `Failed to import key: ${error}`,
+        error instanceof Error ? error : new Error(String(error)),
+      );
     }
   }
 }

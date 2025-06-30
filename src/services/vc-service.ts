@@ -39,7 +39,7 @@ export class VCService<T extends SynetVerifiableCredential> implements IVCServic
     private readonly agent: TAgent<
       IKeyManager & IDIDManager & ICredentialPlugin
     >,
-    private readonly storage: AbstractVCStore<SynetVerifiableCredential<BaseCredentialSubject>>,
+    private readonly storage: AbstractVCStore,
     private readonly options: VCServiceOptions = {},
     private readonly logger?: Logger,
   ) {}
