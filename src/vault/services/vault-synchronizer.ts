@@ -1,12 +1,11 @@
 import type { 
-  IdentityVault, 
   IVaultStorage,
   VaultEvent, 
   FileChangedEvent,
   AdapterData
 } from "@synet/vault-core";
-import type {ManagedPrivateKey} from "@synet/identity-core";
-import { vaultEventService, VaultEventType } from "@synet/vault-core";
+import {Identity,   type ManagedPrivateKey} from "@synet/identity-core";
+import { IdentityVault,  vaultEventService, VaultEventType } from "@synet/vault-core";
 import type { Logger } from "@synet/logger";
 import path from "node:path";
 import { Result } from "@synet/patterns";
@@ -138,29 +137,38 @@ private async processSectionUpdate(
   const content = await this.filesystem.readFile(filePath);
   if (!content) return;
   
-  const parsedData = JSON.parse(content);
-  const dataArray = Object.values(parsedData);
-  
-  const vaultVO = VaultId.create(vaultId);
+  const vaultVOResult = IdentityVault.fromJSON(content);
 
-  if(!vaultVO.isSuccess || !vaultVO.value) {
+  if(!vaultVOResult.isSuccess || !vaultVOResult.value) {
     throw new Error(`Invalid vault ID: ${vaultId}`);
   }
-  // Create targeted update
-  const update: IdentityVault = { 
-    id: vaultVO.value,
-    [section]: dataArray 
-  } as unknown as IdentityVault;
 
-  
+  const vaultVO = vaultVOResult.value;
+
+  const dataArray = Object.values(vaultVO);
+    
+  // Create targeted update
+  const update = { 
+    id: vaultVO.id.toString(),
+    [section]: dataArray 
+  };
+
+
+  const newVaultResult = IdentityVault.create(update)
+
+  if (!newVaultResult.isSuccess || !newVaultResult.value) {
+    throw new Error(`Failed to create new vault VO: ${newVaultResult.errorMessage}`);
+  }
+
+  const serializedData = JSON.stringify(newVaultResult.value.toJSON(), null, 2);
   // Update only this section
-  await this.vaultStorage.update(vaultId, update);
+  await this.vaultStorage.update(vaultId, serializedData);
   this.logger?.debug(`Updated vault ${vaultId} section ${section} with ${dataArray.length} items`);
 }
   /**
    * Seed data files from vault when changing active vault
    */
-  async seedFilesFromVault(vaultId: string): Promise<Result<void>> {
+  /* async seedFilesFromVault(vaultId: string): Promise<Result<void>> {
     try {
       // Check if vault exists
        // Check if vault exists
@@ -259,7 +267,7 @@ private async processSectionUpdate(
       this.logger?.error(`Error seeding files from vault: ${error}`);
       return Result.fail(`Failed to seed files from vault: ${error}`);
     }
-  }
+  } */
 
   /**
    * Set active vault for synchronization

@@ -138,10 +138,6 @@ export class IdentityService {
         );
       }
 
-
-
-
-
       const vaultCreateResult = IdentityVault.create({
         id: vaultId,
         identity: identityResult.value,
@@ -204,7 +200,7 @@ export class IdentityService {
       }
 
 
-      this.vault.deleteVault(aliasOrDid);
+      await this.vault.deleteVault(aliasOrDid);
 
   
       this.logger?.info(`Successfully deleted identity "${aliasOrDid}"`);
@@ -222,7 +218,7 @@ export class IdentityService {
   /**
    * List all identities
    */
-  async listIdentities(): Promise<Result<Identity[]>> {
+  async listIdentities(): Promise<Result<IIdentity[]>> {
 
       const vaultsResult = await this.vault.listVaults();
 
@@ -231,11 +227,16 @@ export class IdentityService {
         return Result.fail(`Failed to list identities: ${vaultsResult.errorMessage}`, vaultsResult.errorCause);
       }
 
-      const identities: Identity[] = [];
+      const identities: IIdentity[] = [];
       const vaults = vaultsResult.value;
       for (const vault of vaults) {
           if (vault.identity) {
-            identities.push(vault.identity);
+
+            const idResult = Identity.create(vault.identity)
+              
+            if(idResult.isSuccess && idResult.value) {
+              identities.push(idResult.value.toDomain());
+            }
           }
       }
    
@@ -245,7 +246,7 @@ export class IdentityService {
   /**
    * Get a single identity by alias or DID
    */
-  async getIdentity(alias: string): Promise<Result<IIdentity>> {
+  async getIdentity(alias: string): Promise<Result<Identity>> {
     try {
       if (!this.vault) {
          return Result.fail("Vault operator not configured");
@@ -275,7 +276,7 @@ export class IdentityService {
 
       //console.log("retrieving identity:", identity.value);
 
-      return Result.success(identity.toDomain());
+      return Result.success(identity);
 
     } catch (error) {
       this.logger?.error(`Failed to get identity: ${error}`);

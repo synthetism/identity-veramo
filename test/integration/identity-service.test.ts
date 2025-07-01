@@ -35,15 +35,19 @@ describe('IdentityService Integration Tests', () => {
     }, getNullLogger());
    });
 
-  afterEach(async () => {
+   afterEach(async () => {
     // Clean up test directory
     try {
-      await fs.deleteDir(testDir);
+     
+        await fs.deleteDir(testDir);
+
+        //await fs.e(testDir);
+
     } catch (error) {
       // Ignore cleanup errors
       console.warn('Failed to cleanup test directory:', error);
     }
-  });
+  }); 
 
   describe('Identity Creation', () => {
     it('should create a new identity successfully', async () => {
@@ -97,10 +101,10 @@ describe('IdentityService Integration Tests', () => {
     it('should retrieve identity by alias', async () => {
       const result = await identityService.getIdentity('alice');
 
-      console.log("getIdentityTest:", result.value);
+      //console.log("getIdentityTest:", result.value);
 
 
-      console.log("Date is instance of ", result.value.createdAt instanceof Date);
+      //console.log("Date is instance of ", result.value.createdAt instanceof Date);
 
       expect(result.isSuccess).toBe(true);
       expect(result.value.alias).toBe('alice');
@@ -229,10 +233,13 @@ describe('IdentityService Integration Tests', () => {
     it('should delete identity', async () => {
       const deleteResult = await identityService.deleteIdentity('original-name');
       
+    
       expect(deleteResult.isSuccess).toBe(true);
       
       // Verify identity no longer exists
       const getResult = await identityService.getIdentity('original-name');
+
+
       expect(getResult.isSuccess).toBe(false);
       
       // Verify it's not in the list

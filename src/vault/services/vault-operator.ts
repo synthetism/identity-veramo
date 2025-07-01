@@ -78,7 +78,9 @@ export class VaultOperator implements IVaultOperator {
       const vault = vaultResult.value;
       const vaultId = vault.id.toString();
 
-      await this.vaultStorage.create(vaultId, vault);  
+       const vaultData =  JSON.stringify(vault.toJSON(), null, 2); // Convert to JSON string with pretty print
+
+      await this.vaultStorage.create(id, vaultData);  
 
       this.logger?.info(`Created new vault: ${vaultId}`);
       return Result.success(vault.id);
@@ -89,12 +91,13 @@ export class VaultOperator implements IVaultOperator {
     }
   }
 
-  async updateVault(vaultData: IdentityVault): Promise<Result<void>> {
+  async updateVault(vault: IdentityVault): Promise<Result<void>> {
     try {
-      
-     const vaultId = vaultData.id.toString();
-      // Update the vault
-      await this.vaultStorage.update(vaultId, vaultData);
+
+      const vaultId = vault.id.toString();
+      const serializedData = JSON.stringify(vault.toJSON(), null, 2);
+
+      await this.vaultStorage.update(vaultId, serializedData);
       this.logger?.info(`Updated vault: ${vaultId}`);
       return Result.success(undefined);
     } catch (error: unknown) {
@@ -137,23 +140,18 @@ export class VaultOperator implements IVaultOperator {
    */
   async getVault(id: string): Promise<Result<IdentityVault>> {
     try {
-      const vaultIdResult = VaultId.create(id);
-
-      if (!vaultIdResult.isSuccess) {
-        return Result.fail(vaultIdResult.errorMessage || 'Invalid vault ID');
-      }
-
-      const vaultId = vaultIdResult.value.toString();
-      
-      // Check if vault exists
-      if (!await this.vaultStorage.exists(vaultId)) {
-        return Result.fail(`Vault with ID ${vaultId} does not exist`);
-      }
+     
       
       // Get the vault
-      const vault = await this.vaultStorage.get(vaultId);
+      const serializedData = await this.vaultStorage.get(id);
       
-      return Result.success(vault);
+       const vaultResult = IdentityVault.fromJSON(serializedData);
+      
+       if (!vaultResult.isSuccess) {
+        return Result.fail(`Failed to deserialize vault: ${vaultResult.errorMessage}`);
+       }
+       return Result.success(vaultResult.value);
+
     } catch (error: unknown) {
       this.logger?.error(`Error getting vault: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return Result.fail(`Failed to get vault: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -164,16 +162,21 @@ export class VaultOperator implements IVaultOperator {
      * List all vaults
      */
     async listVaults(): Promise<Result<IdentityVault[]>> {
-        try {
-        
-        const vaults = await this.vaultStorage.list();      
-        return Result.success(vaults);
+    try {
 
-        } catch (error: unknown) {
-
-        this.logger?.error(`Error listing vaults: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        return Result.fail(`Storage Internal Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      const vaultIds = await this.vaultStorage.list();
+      const vaults: IdentityVault[] = [];
+      
+      for (const vaultId of vaultIds) {
+        const vaultResult = await this.getVault(vaultId);
+        if (vaultResult.isSuccess) {
+          vaults.push(vaultResult.value);
+        }
       }
       
+      return Result.success(vaults);
+    } catch (error) {
+      return Result.fail(`Failed to list vaults: ${error}`);
     }
+  }
 }

@@ -56,14 +56,10 @@ export class FileVaultStorage implements IVaultStorage {
         // Delete the vault file
         await this.filesystem.deleteFile(vaultFilePath);
     }
-
-
     
 
-    async create(vaultId:string, identityVault: IdentityVault): Promise<void> {
-
-        const vaultData = identityVault.toJSON();
-
+    async create(vaultId:string, serializedData: string): Promise<void> {
+       
         const vaultFilePath = this.getPath(vaultId);
 
         // Check if vault already exists
@@ -74,12 +70,12 @@ export class FileVaultStorage implements IVaultStorage {
         // Ensure the vault directory exists
         await this.filesystem.ensureDir(this.vaultPath);
 
-        await this.filesystem.writeFile(vaultFilePath, JSON.stringify(vaultData, null, 2));
+        await this.filesystem.writeFile(vaultFilePath, serializedData);
         // Write the vault data to a file
                      
     }
     
-    async get(vaultId: string): Promise<IdentityVault> {
+    async get(vaultId: string): Promise<string> {
 
         try {
              const vaultFilePath = this.getPath(vaultId);
@@ -89,24 +85,10 @@ export class FileVaultStorage implements IVaultStorage {
                 throw new VError(`Vault with ID ${vaultId} does not exist.`);
             }
 
-            console.log(`Retrieving vault with ID ${vaultId} from path: ${vaultFilePath}`);
+            //console.log(`Retrieving vault with ID ${vaultId} from path: ${vaultFilePath}`);
 
-            const vaultJson = await this.filesystem.readFile(vaultFilePath);
-            //console.log(`Read vault JSON (length: ${vaultJson.length}):`, `${vaultJson.substring(0, 100)}...`);
-
-            const result = IdentityVault.fromJSON(vaultJson);
-
-            if( !result.isSuccess) {
-                throw new VError({
-                  name: 'InvalidVaultDataError',
-                  cause: result.errorCause,
-                  info: {
-                    vaultId,               
-                  },
-                }, `Failed to convert vault data: ${result.errorMessage}`);
-            }
-
-            return result.value;
+            const vaultJson = await this.filesystem.readFile(vaultFilePath);         
+            return vaultJson;
 
           } catch (error) {
 
@@ -118,7 +100,7 @@ export class FileVaultStorage implements IVaultStorage {
     }
  
   // In FileVaultStorage.ts
-  async update(vaultId: string, vaultData: IdentityVault): Promise<void> {
+  async update(vaultId: string, serializedData: string): Promise<void> {
   const filePath = this.getPath(vaultId);
   
   if (!await this.exists(vaultId)) {
@@ -127,42 +109,9 @@ export class FileVaultStorage implements IVaultStorage {
   
   try {
   
-   /*  const currentVault = await this.get(vaultId);
-    const updatedVaultResult = IdentityVault.create({
-      ...currentVault,
-      ...vaultData,
-      id: currentVault.id.toString(), // Preserve the original ID
-    }); */
-
-   /* if(updatedVaultResult.isFailure) {
-      throw new VError({
-        name: 'InvalidVaultDataError',
-        cause: updatedVaultResult.errorCause,
-        info: {
-          vaultId,
-        },
-      }, `Failed to convert vault data: ${updatedVaultResult.errorMessage}`);
-    }
-
-    const updatedVault = updatedVaultResult.value;
-
-    console.log('currentVault:', currentVault);
-
-    const serialized = JSON.stringify(currentVault, null, 2);
-
-    this.logger?.debug(
-      `Updating vault ${vaultId} with:` +
-      ` ${updatedVault.didStore?.length || 0} DIDs,` +
-      ` ${updatedVault.keyStore?.length || 0} keys,` +
-      ` ${updatedVault.privateKeyStore?.length || 0} private keys,` +
-      ` ${updatedVault.vcStore?.length || 0} VCs`
-    );  */
-
-    const serialized = JSON.stringify(vaultData.toJSON(), null, 2);
-
 
     // Write the file directly without lockfile for now to avoid async issues
-    await this.filesystem.writeFile(filePath, serialized);
+    await this.filesystem.writeFile(filePath, serializedData);
 
     this.logger?.debug(`Updated vault ${vaultId} at ${filePath}`);
 
@@ -171,26 +120,16 @@ export class FileVaultStorage implements IVaultStorage {
     throw new Error(`Failed to update vault ${vaultId}: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
-   async list(): Promise<IdentityVault[]> {
-
-        if(! await this.filesystem.exists(this.vaultPath)) {            
-            return []; // Return empty array if vault path does not exist
-        }
-        const vaults: IdentityVault[] = [];
-        const files = await this.filesystem.readDir(this.vaultPath);
-        if (!files || files.length === 0) {
-            return vaults; // Return empty array if no files found
-        }
-        for (const file of files) {
-            if (file.endsWith('.json')) {
-            const vaultId = path.basename(file, '.json');
-            const vaultData = await this.get(vaultId);
-            vaults.push(vaultData);
-            }
-        }
-
-        return vaults;
+   async list(): Promise<string[]> {
+    if (!await this.filesystem.exists(this.vaultPath)) {
+      return [];
     }
+    
+    const files = await this.filesystem.readDir(this.vaultPath);
+    return files
+      .filter(file => file.endsWith('.json'))
+      .map(file => path.basename(file, '.json'));  // Return just vault IDs
+   }
 
     async exists(vaultId: string): Promise<boolean> {
         const vaultFilePath = this.getPath(vaultId);
