@@ -64,7 +64,7 @@ export class VaultOperator implements IVaultOperator {
     /**
    * Create a new vault
    */
-  async createNew(id: string): Promise<Result<void>> {
+  async createNew(id: string): Promise<Result<VaultId>> {
     try {
 
       const vaultResult = IdentityVault.createNew({ id });
@@ -81,7 +81,8 @@ export class VaultOperator implements IVaultOperator {
       await this.vaultStorage.create(vaultId, vault);  
 
       this.logger?.info(`Created new vault: ${vaultId}`);
-      return Result.success(undefined);
+      return Result.success(vault.id);
+
     } catch (error: unknown) {
       this.logger?.error(`Error creating vault: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return Result.fail(`Failed to create vault: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -164,11 +165,15 @@ export class VaultOperator implements IVaultOperator {
      */
     async listVaults(): Promise<Result<IdentityVault[]>> {
         try {
-        const vaults = await this.vaultStorage.list();
+        
+        const vaults = await this.vaultStorage.list();      
         return Result.success(vaults);
+
         } catch (error: unknown) {
+
         this.logger?.error(`Error listing vaults: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        return Result.fail(`Failed to list vaults: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        }
+        return Result.fail(`Storage Internal Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+      
     }
 }

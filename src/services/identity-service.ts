@@ -5,7 +5,8 @@ import { Identity } from "@synet/identity-core";
 import type { IVCService, IKeyService, IDidService } from "../shared/provider";
 import type { SynetVerifiableCredential, IdentitySubject } from "@synet/credentials";
 import { CredentialType } from "@synet/credentials";
-import type {  IdentityVault, IVaultOperator } from "@synet/vault-core";
+import type { IVaultOperator } from "@synet/vault-core";
+import { IdentityVault } from "@synet/vault-core";
 import { VaultId } from "@synet/vault-core";
 //import { IdentityUnit } from "../domain/value-objects/identity";
 /**
@@ -46,20 +47,10 @@ export class IdentityService {
     try {
       this.logger?.debug(`Creating identity with alias "${alias}"...`);
 
-       const vaultIdOrError = VaultId.create(alias);
+     
 
-      if (!vaultIdOrError.isSuccess) {
-        this.logger?.error(`Failed to create vault ID: ${vaultIdOrError.errorMessage}`);
-        return Result.fail(
-          `Failed to create vault ID: ${vaultIdOrError.errorMessage}`,
-          vaultIdOrError.errorCause,
-        );
-      }
-    
-      const vaultId = vaultIdOrError.value;
-      this.vaultId = vaultId.toString();      
+     const vaultResult = await this.vault.createNew(alias);
 
-     const vaultResult = await this.vault.createNew(this.vaultId);
       if (!vaultResult.isSuccess) {
       return Result.fail(
         `Failed to create vault for identity: ${vaultResult.errorMessage}`,
@@ -67,7 +58,9 @@ export class IdentityService {
       );
       }
 
-      const useResult = await this.vault.use(this.vaultId);
+      const vaultId = vaultResult.value.toString();
+      
+      const useResult = await this.vault.use(vaultId);
       if (!useResult.isSuccess) {
         return Result.fail(
           `Failed to use vault for identity: ${useResult.errorMessage}`,
@@ -147,7 +140,9 @@ export class IdentityService {
 
 
 
-      const vaultEntry: IdentityVault = {
+
+
+      const vaultCreateResult = IdentityVault.create({
         id: vaultId,
         identity: identityResult.value,
         keyStore: [keyResult.value],
@@ -156,7 +151,19 @@ export class IdentityService {
         privateKeyStore: [], 
         wgKeyStore: [], // Optional, can be managed separately
         createdAt: new Date(),
-      };
+      });
+
+      if(!vaultCreateResult.isSuccess) {
+        this.logger?.error(`Failed to create vault entry: ${vaultCreateResult.errorMessage}`);
+        return Result.fail(
+          `Failed to create vault entry: ${vaultCreateResult.errorMessage}`,
+          vaultCreateResult.errorCause,
+        );
+      }   
+
+      const vaultEntry = vaultCreateResult.value;
+
+      //console.log('vaultEntry:', vaultEntry);
 
       const updateResult = await this.vault.updateVault(vaultEntry);
       if (!updateResult.isSuccess) {
@@ -238,21 +245,37 @@ export class IdentityService {
   /**
    * Get a single identity by alias or DID
    */
-  async getIdentity(aliasOrDid: string): Promise<Result<Identity>> {
+  async getIdentity(alias: string): Promise<Result<IIdentity>> {
     try {
       if (!this.vault) {
          return Result.fail("Vault operator not configured");
       }
 
-      this.logger?.debug(`Getting identity with alias or DID "${aliasOrDid}"...`);
-      const identityResult = await this.vault.getVault(aliasOrDid);
+      this.logger?.debug(`Getting identity with alias or DID "${alias}"...`);
+      const vaultResult = await this.vault.getVault(alias);
       
-      if (!identityResult.isSuccess || !identityResult.value.identity) {
-        this.logger?.warn(`Identity "${aliasOrDid}" not found`);
-        return Result.fail(`Identity "${aliasOrDid}" not found`);
+      if (!vaultResult.isSuccess || !vaultResult.value.identity) {
+        this.logger?.warn(`Identity "${alias}" not found`);
+        return Result.fail(`Identity "${alias}" not found`);
       }
+
+      const identityResult = Identity.create(vaultResult.value.identity);
+
+      if (!identityResult.isSuccess || !identityResult.value) {
+        this.logger?.error(`Failed to get identity: ${identityResult.errorMessage}`);
+        return Result.fail(
+          `Failed to get identity: ${identityResult.errorMessage}`,
+          identityResult.errorCause,
+        );
+      }
+
+       const identity = identityResult.value;
       
-      return Result.success(identityResult.value.identity);
+       //console.log("getIdentity:", identity.toDomain());
+
+      //console.log("retrieving identity:", identity.value);
+
+      return Result.success(identity.toDomain());
 
     } catch (error) {
       this.logger?.error(`Failed to get identity: ${error}`);

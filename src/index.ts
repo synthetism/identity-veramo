@@ -58,7 +58,7 @@ export function createIdentityService(
     {
       storeDir: storeDir
     },
-    effectiveLogger
+    effectiveLogger.child('Vault')
   );
 
 

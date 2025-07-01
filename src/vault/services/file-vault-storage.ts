@@ -92,8 +92,7 @@ export class FileVaultStorage implements IVaultStorage {
             console.log(`Retrieving vault with ID ${vaultId} from path: ${vaultFilePath}`);
 
             const vaultJson = await this.filesystem.readFile(vaultFilePath);
-            console.log(`Read vault JSON (length: ${vaultJson.length}):`, `${vaultJson.substring(0, 100)}...`);
-
+            //console.log(`Read vault JSON (length: ${vaultJson.length}):`, `${vaultJson.substring(0, 100)}...`);
 
             const result = IdentityVault.fromJSON(vaultJson);
 
@@ -128,21 +127,21 @@ export class FileVaultStorage implements IVaultStorage {
   
   try {
   
-   const currentVault = await this.get(vaultId);
+   /*  const currentVault = await this.get(vaultId);
     const updatedVaultResult = IdentityVault.create({
       ...currentVault,
       ...vaultData,
       id: currentVault.id.toString(), // Preserve the original ID
-    });
+    }); */
 
-    if(updatedVaultResult.isFailure) {
+   /* if(updatedVaultResult.isFailure) {
       throw new VError({
         name: 'InvalidVaultDataError',
         cause: updatedVaultResult.errorCause,
         info: {
           vaultId,
         },
-      }, `Failed to convert vault data: ${updatedVaultResult.errorMessage}`); 
+      }, `Failed to convert vault data: ${updatedVaultResult.errorMessage}`);
     }
 
     const updatedVault = updatedVaultResult.value;
@@ -157,7 +156,10 @@ export class FileVaultStorage implements IVaultStorage {
       ` ${updatedVault.keyStore?.length || 0} keys,` +
       ` ${updatedVault.privateKeyStore?.length || 0} private keys,` +
       ` ${updatedVault.vcStore?.length || 0} VCs`
-    );
+    );  */
+
+    const serialized = JSON.stringify(vaultData.toJSON(), null, 2);
+
 
     // Write the file directly without lockfile for now to avoid async issues
     await this.filesystem.writeFile(filePath, serialized);
@@ -171,6 +173,9 @@ export class FileVaultStorage implements IVaultStorage {
 }
    async list(): Promise<IdentityVault[]> {
 
+        if(! await this.filesystem.exists(this.vaultPath)) {            
+            return []; // Return empty array if vault path does not exist
+        }
         const vaults: IdentityVault[] = [];
         const files = await this.filesystem.readDir(this.vaultPath);
         if (!files || files.length === 0) {
