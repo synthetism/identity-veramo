@@ -1,17 +1,19 @@
 // application/use-cases/credentials/commands/issue-credential.command.ts
-import type { Dependencies } from '../../../common/types/dependencies';
 import { Result } from '@synet/patterns';
 import type { SynetVerifiableCredential, BaseCredentialSubject } from '@synet/credentials';
 import { IdentityVault } from '@synet/vault-core';
 import type { UseCase } from '../../../../domain/use-case';
-import type { CredentialgDependencies } from "../types";
+import type { CredentialDependencies } from "../types";
 import type { IssueCredentialParams } from '../types/params/issue-credential.params';
 
-export function issueCredentialCommand(deps: CredentialgDependencies):
+
+export function issueCredentialCommand(deps: CredentialDependencies):
   UseCase<IssueCredentialParams, Promise<Result<SynetVerifiableCredential>>> {
 
   return {
-    execute: async (params: IssueCredentialParams): Promise<Result<SynetVerifiableCredential>> => {
+    execute: async <S extends BaseCredentialSubject = BaseCredentialSubject>(
+      params: IssueCredentialParams<S>
+    ): Promise<Result<SynetVerifiableCredential<S>>> => {
       try {
         // Issue VC using provider service
         const vcResult = await deps.vcService.issueVC(
@@ -44,6 +46,7 @@ export function issueCredentialCommand(deps: CredentialgDependencies):
             }
           }
         }
+
 
         return Result.success(vc);
       } catch (error) {

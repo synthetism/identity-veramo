@@ -65,6 +65,8 @@ export class IdentityService {
       // Create a DID with the key
       const didResult = await this.useCases.did.commands.create({ vaultId });
 
+      console.log("didResult:", didResult.value.keys);
+
       if (!didResult.isSuccess || !didResult.value || !didResult.value.controllerKeyId) {
         return Result.fail(
           `Failed to create DID: ${didResult.errorMessage}`,
@@ -74,6 +76,22 @@ export class IdentityService {
 
       const { did, controllerKeyId, provider } = didResult.value;
 
+
+      const keyResult = await this.useCases.key.queries.getKey(controllerKeyId);
+
+      
+      const privateKeyResult = await this.useCases.key.queries.getPrivateKey(controllerKeyId);
+     
+      if (!privateKeyResult.isSuccess || !privateKeyResult.value) {
+        this.logger?.error(`Failed to retrieve private key for DID: ${privateKeyResult.errorMessage}`);
+        return Result.fail(
+          `Failed to retrieve private key for DID: ${privateKeyResult.errorMessage}`,
+          privateKeyResult.errorCause,
+        );
+      }
+
+      const privateKey  = privateKeyResult.value;
+ 
       const credentialSubject: IdentitySubject = {
         holder: {
           id: did,
@@ -101,7 +119,7 @@ export class IdentityService {
 
       const vc = vcResult.value;
 
-      const keyResult = await this.useCases.key.queries.getKey(controllerKeyId);
+
 
       if (!keyResult.isSuccess || !keyResult.value) {
         this.logger?.error(`Failed to retrieve key for DID: ${keyResult.errorMessage}`);
@@ -111,14 +129,14 @@ export class IdentityService {
         );
       }
   
-      const { publicKeyHex, privateKeyHex, type } = keyResult.value;
+      const { publicKeyHex, type } = keyResult.value;
 
      const params = {
         alias: alias,
         did: did,
         kid: controllerKeyId,
         publicKeyHex: publicKeyHex,
-        privateKeyHex: privateKeyHex, // Optional, can be used for signing
+        privateKeyHex: privateKey.privateKeyHex, 
         provider: provider,
         credential: vc,
       }
@@ -132,22 +150,15 @@ export class IdentityService {
           identityResult.errorCause,
         );
       }
-
-      const privateKeyStore: ManagedPrivateKey = {
-     
-        type: type as TKeyType,
-        alias,
-        privateKeyHex: privateKeyHex || '',
-
-      }
-
+        
+      
       const vaultCreateResult = IdentityVault.create({
         id: vaultId,
         identity: identityResult.value,
         keyStore: [keyResult.value],
         didStore: [didResult.value],
         vcStore: [vc],
-        privateKeyStore: [privateKeyStore], 
+        privateKeyStore: [privateKey], 
         wgKeyStore: [], // Optional, can be managed separately
         createdAt: new Date(),
       });

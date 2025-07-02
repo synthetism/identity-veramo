@@ -1,25 +1,26 @@
 import { Result } from "@synet/patterns";
-import type { IKey } from "@synet/identity-core";
+import type { ManagedPrivateKey } from "@synet/identity-core";
 import type { KeyDependencies } from "../types";
 
 
-export const getKeyQuery = (deps: KeyDependencies) => {
-  return async (keyId: string): Promise<Result<IKey | null>> => {
+export const getPrivateKeyQuery = (deps: KeyDependencies) => {
+  return async (keyId: string): Promise<Result<ManagedPrivateKey | null>> => {
     try {
-      deps.logger?.debug(`Getting key: ${keyId}`);
+      deps.logger?.debug(`Getting private key: ${keyId}`);
       
-      const result = await deps.keyService.get(keyId);
+      const result = await deps.privateKeyService.get(keyId);
       
       if (!result.isSuccess) {
         deps.logger?.error(`Failed to get key: ${result.errorMessage}`);
         return Result.fail(
-          `Failed to get key: ${result.errorMessage}`,
+          `Failed to get private key: ${result.errorMessage}`,
           result.errorCause
         );
       }
-      const publicKey = result.value;
+      const privateKey = result.value;
 
-      return Result.success(publicKey);
+      return Result.success(privateKey);
+
     } catch (error) {
       const errorMessage = `Unexpected error getting key: ${error instanceof Error ? error.message : 'Unknown error'}`;
       deps.logger?.error(errorMessage, error);

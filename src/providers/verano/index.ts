@@ -24,6 +24,7 @@ import type { AbstractVCStore } from "./domain/interfaces/abstract-vc-store";
 import { VeramoDidService } from "./services/did-service";
 import { VeramoKeyService} from "./services/key-service";
 import { VeramoVCService } from "./services/vc-service";
+import { VeramoPrivateKeyService } from "./services/private-key-service";
 
 import path from "node:path";
 import os from "node:os";
@@ -81,11 +82,17 @@ export function createVeramoProvider(
     {},
     effectiveLogger
   );
+  
+  const privateKeyService = new VeramoPrivateKeyService(
+    adapters.privateKeyStore,
+    effectiveLogger
+  );
 
   return {
     didService,
     keyService,
     vcService,
+    privateKeyService,
   }
 }
 

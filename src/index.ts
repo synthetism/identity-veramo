@@ -64,6 +64,7 @@ function makeDependencies(
     didService: services.didService,
     keyService: services.keyService,
     vcService: services.vcService,
+    privateKeyService: services.privateKeyService,
     vaultOperator: vault.operator,
     logger: effectiveLogger
   };
@@ -106,6 +107,7 @@ export function createIdentityService(
     didService: services.didService,
     keyService: services.keyService,
     vcService: services.vcService,
+    privateKeyService: services.privateKeyService,
     vaultOperator: vault.operator,
     logger: effectiveLogger
   };
@@ -161,6 +163,7 @@ export function createCredentialService(
     didService: services.didService,
     keyService: services.keyService,
     vcService: services.vcService,
+    privateKeyService: services.privateKeyService,
     vaultOperator: vault.operator,
     logger: effectiveLogger
   };
@@ -169,7 +172,7 @@ export function createCredentialService(
   const useCases = makeUseCases(deps);
 
   // Return orchestrator service
-  return new CredentialService(useCases, effectiveLogger);
+  return new CredentialService(useCases,vault.operator, effectiveLogger);
 }
 
 /**
@@ -205,6 +208,7 @@ export function createDidService(
     didService: services.didService,
     keyService: services.keyService,
     vcService: services.vcService,
+    privateKeyService: services.privateKeyService,
     vaultOperator: vault.operator,
     logger: effectiveLogger
   };
@@ -249,6 +253,7 @@ export function createKeyService(
     didService: services.didService,
     keyService: services.keyService,
     vcService: services.vcService,
+    privateKeyService: services.privateKeyService,
     vaultOperator: vault.operator,
     logger: effectiveLogger
   };

@@ -1,8 +1,8 @@
 import { Result } from "@synet/patterns";
 import type { SynetVerifiableCredential } from "@synet/credentials";
-import type { CredentialgDependencies } from "../types";
+import type { CredentialDependencies } from "../types";
 
-export const listCredentialsQuery = (deps: CredentialgDependencies) => {
+export const listCredentialsQuery = (deps: CredentialDependencies) => {
   return async (): Promise<Result<SynetVerifiableCredential[]>> => {
     try {
       deps.logger?.debug("Listing all credentials");

@@ -33,7 +33,7 @@ export class VeramoVCService implements IVCServiceProvider {
   /**
    * Issue a new verifiable credential
    */
-  async issueVC<S extends Record<string, unknown>>(
+  async issueVC<S extends BaseCredentialSubject = BaseCredentialSubject>(
     subject: S,
     type: string | string[],
     issuerDid?: string,
@@ -43,7 +43,7 @@ export class VeramoVCService implements IVCServiceProvider {
       issuanceDate?: string;
       expirationDate?: string;
     }
-  ): Promise<Result<SynetVerifiableCredential>> {
+  ): Promise<Result<SynetVerifiableCredential<S>>> {
     try {
       const defaultContext = ['https://www.w3.org/2018/credentials/v1'];
       
@@ -94,7 +94,7 @@ export class VeramoVCService implements IVCServiceProvider {
             credentialSubject: subject,
           },
           proofFormat: "jwt",
-        })) as SynetVerifiableCredential;
+        })) as SynetVerifiableCredential<S>;
 
         // Store the credential
         const saveResult = await this.save(vc);

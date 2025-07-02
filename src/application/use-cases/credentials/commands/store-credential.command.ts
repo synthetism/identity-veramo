@@ -2,14 +2,14 @@ import { Result } from "@synet/patterns";
 import type { SynetVerifiableCredential } from "@synet/credentials";
 import type { UseCase } from "../../../../domain/use-case";
 import { IdentityVault } from "@synet/vault-core";
-import type { CredentialgDependencies } from "../types";
+import type { CredentialDependencies } from "../types";
 
 export interface StoreCredentialParams {
   credential: SynetVerifiableCredential;
   vaultId?: string;
 }
 
-export function storeCredentialCommand(deps: CredentialgDependencies): 
+export function storeCredentialCommand(deps: CredentialDependencies): 
   UseCase<StoreCredentialParams, Promise<Result<void>>> {
  
   const  execute  = async (params: StoreCredentialParams): Promise<Result<void>> => {

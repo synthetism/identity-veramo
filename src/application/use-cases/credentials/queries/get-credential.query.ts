@@ -3,11 +3,11 @@ import type { SynetVerifiableCredential } from "@synet/credentials";
 import type { IVCServiceProvider } from "../../../../shared/provider";
 import type { IVaultOperator } from "@synet/vault-core";
 import type { Logger } from "@synet/logger";
-import type {CredentialgDependencies} from "../types";
+import type {CredentialDependencies} from "../types";
 
 
 
-export const getCredentialQuery = (deps: CredentialgDependencies) => {
+export const getCredentialQuery = (deps: CredentialDependencies) => {
   return async (credentialId: string): Promise<Result<SynetVerifiableCredential | null>> => {
     try {
       deps.logger?.debug(`Getting credential with ID: ${credentialId}`);

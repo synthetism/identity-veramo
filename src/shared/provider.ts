@@ -1,6 +1,7 @@
 import type { Result } from "@synet/patterns";
-import type { IIdentifier, TKeyType, KeyMetadata, IKey } from "@veramo/core-types";
+import type { IIdentifier, TKeyType, KeyMetadata, IKey, ManagedPrivateKey } from "@synet/identity-core";
 import type { BaseCredentialSubject, SynetVerifiableCredential } from "@synet/credentials";
+
 
 export interface IDidServiceProvider {
   create(
@@ -22,12 +23,23 @@ export interface IKeyServiceProvider {
   delete(kid: string): Promise<Result<boolean>>;
 }
 
+export interface IPrivateKeyProvider {
+
+  get(kid: string): Promise<Result<ManagedPrivateKey>>;
+}
+
 export interface IVCServiceProvider {
-  issueVC<S extends Record<string, unknown>>(
+  issueVC<S extends BaseCredentialSubject = BaseCredentialSubject>(
     subject: S,
-    type: string[],
+    credentialType: string[],
     issuerDid?: string,
-  ): Promise<Result<SynetVerifiableCredential>>;
+    options?: {
+      vcId?: string;
+      context?: string[];
+      issuanceDate?: string;
+      expirationDate?: string;
+    }
+  ): Promise<Result<SynetVerifiableCredential<S>>>;  // Return the specific type S
 
   verifyVC(vc: SynetVerifiableCredential): Promise<Result<boolean>>;
   getVC(id: string): Promise<Result<SynetVerifiableCredential | null>>;
@@ -45,4 +57,5 @@ export interface ProviderServices {
   didService: IDidServiceProvider;
   keyService: IKeyServiceProvider;
   vcService: IVCServiceProvider;
+  privateKeyService: IPrivateKeyProvider;
 }
