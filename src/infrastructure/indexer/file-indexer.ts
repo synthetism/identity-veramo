@@ -1,7 +1,7 @@
 import path from "node:path";
 import type { IndexEntry, IndexRecord } from "./types";
 import type { IIndexer } from "@synet/patterns/storage";
-import type { IFileSystem } from "../filesystem/filesystem.interface";
+import type { IFileSystem } from "@synet/patterns/filesystem";
 import type { Logger } from "@synet/logger";
 
 /**
@@ -119,7 +119,7 @@ export class FileIndexer implements IIndexer<IndexEntry> {
   private ensureIndexDirectory(): void {
     const indexDir = path.dirname(this.indexPath);
     if (!this.filesystem.existsSync(indexDir)) {
-      this.filesystem.ensureDir(indexDir);
+      this.filesystem.ensureDirSync(indexDir);
     }
   }
 
@@ -178,7 +178,7 @@ export class FileIndexer implements IIndexer<IndexEntry> {
       entries: indexRecord,
       version: "1.0.0",
     };
-    this.filesystem.writeFile(
+    this.filesystem.writeFileSync(
       this.indexPath,
       JSON.stringify(withVersion, null, 2),
     );

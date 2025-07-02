@@ -1,12 +1,10 @@
 import type { Logger } from "@synet/logger";
 import type { IVaultStorage, IVaultOperator } from "@synet/vault-core";
 import { vaultEventService, vaultContext }  from "@synet/vault-core";
-
 import { Result } from "@synet/patterns";
 import { IdentityVault } from "@synet/vault-core";
 import { VaultId } from "../domain/value-objects/vault-id";
 import type { VaultSynchronizer } from "./vault-synchronizer";
-import type { IFileSystem } from "../../shared/filesystem/filesystem.interface";
 
 
 export class VaultOperator implements IVaultOperator {  
@@ -26,7 +24,9 @@ export class VaultOperator implements IVaultOperator {
 
    async exists (vaultId: string): Promise<Result<boolean>> {
       try {
-          const vaultExists = await this.vaultStorage.exists(vaultId);  
+          
+        const vaultExists = await this.vaultStorage.exists(vaultId);  
+
           if (vaultExists) {
               return Result.success(true);
           } 

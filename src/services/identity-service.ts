@@ -2,12 +2,12 @@ import { Result } from "@synet/patterns";
 import type { Logger } from "@synet/logger";
 import type { IIdentifier, KeyMetadata, IKey, TKeyType, IIdentity } from "@synet/identity-core";
 import { Identity } from "@synet/identity-core";
-import type { IDidServiceProvider, IKeyServiceProvider, IVCServiceProvider } from "../shared/provider";
 import type { SynetVerifiableCredential, IdentitySubject } from "@synet/credentials";
 import { CredentialType } from "@synet/credentials";
 import type { IVaultOperator } from "@synet/vault-core";
 import { IdentityVault } from "@synet/vault-core";
-//import { IdentityUnit } from "../domain/value-objects/identity";
+import type { UseCases } from "../application/use-cases";
+
 /**
  * Identity Service Options
  */
@@ -18,21 +18,18 @@ export interface IdentityServiceOptions {
 
 /**
  * Identity Service
- * Coordinates DID, Key, and VC services with vault-based storage
+ * Coordinates DID, Key, and VC services with vault-based storage through use-cases
  */
 export class IdentityService {
-  private vaultId:string;
+  private vaultId: string;
+  
   constructor(
-    private didService: IDidServiceProvider,
-    private keyService: IKeyServiceProvider,
-    private vcService: IVCServiceProvider,
+    private useCases: UseCases,
     private vault: IVaultOperator,
     public readonly options: IdentityServiceOptions = {},
     public readonly logger?: Logger,
   ) {
-
     this.vaultId = '';
-
   }
 
  
@@ -47,7 +44,6 @@ export class IdentityService {
       this.logger?.debug(`Creating identity with alias "${alias}"...`);
 
      
-
      const vaultResult = await this.vault.createNew(alias);
 
       if (!vaultResult.isSuccess) {
@@ -67,7 +63,7 @@ export class IdentityService {
         );
       }
       // Create a DID with the key
-      const didResult = await this.didService.create(this.vaultId);
+      const didResult = await this.useCases.did.commands.create({ vaultId });
 
       if (!didResult.isSuccess || !didResult.value || !didResult.value.controllerKeyId) {
         return Result.fail(
@@ -89,11 +85,11 @@ export class IdentityService {
         },
       };
 
-      const vcResult = await this.vcService.issueVC<IdentitySubject>(
-        credentialSubject,
-        [CredentialType.Identity],           
-        did,
-      );
+      const vcResult = await this.useCases.credentials.commands.issue({
+        subject: credentialSubject,
+        credentialType: [CredentialType.Identity],           
+        issuerDid: did,
+      });
 
       if(!vcResult.isSuccess || !vcResult.value) {
         this.logger?.error(`Failed to issue identity credential: ${vcResult.errorMessage}`);  
@@ -105,7 +101,7 @@ export class IdentityService {
 
       const vc = vcResult.value;
 
-      const keyResult = await this.keyService.get(controllerKeyId);
+      const keyResult = await this.useCases.key.queries.getKey(controllerKeyId);
 
       if (!keyResult.isSuccess || !keyResult.value) {
         this.logger?.error(`Failed to retrieve key for DID: ${keyResult.errorMessage}`);
@@ -307,8 +303,9 @@ export class IdentityService {
       const identity = identityResult.value;
 
       // Update DID alias
-      const didResult = await this.didService.update(identity.did, {
-        alias: newAlias,
+      const didResult = await this.useCases.did.commands.update({
+        did: identity.did,
+        updates: { alias: newAlias }
       });
       if (!didResult.isSuccess) {
         return Result.fail(

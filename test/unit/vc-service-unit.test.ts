@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createVCService } from '../../src/index.js';
+import { createCredentialService } from '../../src/index.js';
 import { getNullLogger } from '@synet/logger';
 import { CredentialType } from '@synet/credentials';
 
 describe('VCService Tests', () => {
-  let vcService: ReturnType<typeof createVCService>;
+  let vcService: ReturnType<typeof createCredentialService>;
 
   beforeEach(() => {
-    vcService = createVCService({
+    vcService = createCredentialService({
       storeDir: '/tmp/vc-test'
     }, getNullLogger());
   });
@@ -31,7 +31,7 @@ describe('VCService Tests', () => {
         }
       };
 
-      const result = await vcService.issueVC(
+      const result = await vcService.issueCredential(
         credentialSubject,
         [CredentialType.Identity],
         'did:key:test123'

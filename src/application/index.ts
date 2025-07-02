@@ -1,15 +1,9 @@
-// application/use-cases/index.ts
-import type { Dependencies } from './types';
-import { makeCredentialUseCases } from './credentials';
-//import { makeDidUseCases } from './did';
-//import { makeKeyUseCases } from './keys';
+// application/index.ts
+import type { Dependencies } from './common/types/dependencies';
+import { makeUseCases } from './use-cases';
 
-export type AppUseCases = ReturnType<typeof makeAppUseCases>;
+export type AppUseCases = ReturnType<typeof makeUseCases>;
 
-export const makeAppUseCases = (deps: Dependencies) => ({
-  credentials: makeCredentialUseCases(deps),
-  //did: makeDidUseCases(deps),
-  //keys: makeKeyUseCases(deps),
-});
+export const makeAppUseCases = (deps: Dependencies) => makeUseCases(deps);
 
-export type { Dependencies } from './types';
+export type { Dependencies } from './common/types/dependencies';

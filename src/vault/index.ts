@@ -63,7 +63,7 @@ export function createVault(
 
   return {
     operator
-  } as Vault;
+  }
 
 }
 

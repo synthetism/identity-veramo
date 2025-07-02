@@ -1,4 +1,4 @@
-import type { IFileSystem } from "../filesystem/filesystem.interface";
+import type { IFileSystem } from "@synet/patterns/filesystem";
 import type { IFileIndexer } from "./file-indexer.interface";
 import type { Logger } from "@synet/logger";
 import { FileIndexer } from "./file-indexer";
