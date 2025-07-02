@@ -2,7 +2,7 @@ import type { Result } from "@synet/patterns";
 import type { IIdentifier, TKeyType, KeyMetadata, IKey } from "@veramo/core-types";
 import type { BaseCredentialSubject, SynetVerifiableCredential } from "@synet/credentials";
 
-export interface IDidService {
+export interface IDidServiceProvider {
   create(
     alias: string,
     options?:{ keyId: string; keyType?: TKeyType },
@@ -16,13 +16,13 @@ export interface IDidService {
   delete(did: string): Promise<Result<boolean>>;
 }
 
-export interface IKeyService {
+export interface IKeyServiceProvider {
   create(type: TKeyType, meta?: KeyMetadata): Promise<Result<IKey>>;
   get(kid: string): Promise<Result<IKey>>;
   delete(kid: string): Promise<Result<boolean>>;
 }
 
-export interface IVCService {
+export interface IVCServiceProvider {
   issueVC<S extends Record<string, unknown>>(
     subject: S,
     type: string[],
@@ -41,9 +41,8 @@ export interface VCServiceOptions {
   defaultIssuerDid?: string;
 }
 
-
 export interface ProviderServices {
-  didService: IDidService;
-  keyService: IKeyService;
-  vcService: IVCService;
+  didService: IDidServiceProvider;
+  keyService: IKeyServiceProvider;
+  vcService: IVCServiceProvider;
 }

@@ -79,19 +79,41 @@ export function createIdentityService(
 }
 
 // Add a standalone function to create just the VC service with vault
-export function createVCService(
-  options: IdentityServiceOptions & { storeDir?: string } = {},
+// index.ts
+export function createIdentityService(
+  options: IdentityServiceOptions = {},
   logger?: Logger,
-): IVCService {
-  const effectiveLogger = logger || getNullLogger();
-  const storeDir = options.storeDir || path.join(os.homedir(), ".synet");      
-  const filesystem = new MemFileSystem();
+): IdentityService {
+  // Setup dependencies
+  const deps: Dependencies = {
+    didService: services.didService,
+    keyService: services.keyService,
+    vcService: services.vcService,
+    vaultOperator: vault.operator,
+    logger
+  };
 
-  const services = createVeramoProvider(
-    { storeDir: storeDir },
-    filesystem,
-    effectiveLogger.child('Veramo'),
-  );
+  // Bootstrap use cases
+  const app = makeAppUseCases(deps);
 
-  return services.vcService;
+  // Return orchestrator service
+  return new IdentityService(app, logger);
+}
+
+export function createCredentialService(
+  options: CredentialServiceOptions = {},
+  logger?: Logger,
+): CredentialService {
+  // Setup dependencies  
+  const deps: Dependencies = {
+    vcService: services.vcService,
+    vaultOperator: vault.operator,
+    logger
+  };
+
+  // Bootstrap use cases
+  const app = makeAppUseCases(deps);
+
+  // Return orchestrator service
+  return new CredentialService(app, logger);
 }

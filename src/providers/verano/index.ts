@@ -21,9 +21,9 @@ import type { AbstractPrivateKeyStore } from "./domain/interfaces/abstract-priva
 import type { AbstractVCStore } from "./domain/interfaces/abstract-vc-store";
 
 /* Services */
-import { DidService } from "./services/did-service";
-import { KeyService } from "./services/key-service";
-import { VCService } from "./services/vc-service";
+import { VeramoDidService } from "./services/did-service";
+import { VeramoKeyService} from "./services/key-service";
+import { VeramoVCService } from "./services/vc-service";
 
 import path from "node:path";
 import os from "node:os";
@@ -73,11 +73,11 @@ export function createVeramoProvider(
   );
   const effectiveLogger = logger || getNullLogger();
   const agent = createAgentWithKMS(adapters);
-  const didService = new DidService(agent, effectiveLogger);
-  const keyService = new KeyService(agent, effectiveLogger);  
-  const vcService = new VCService(
-    agent, 
-    adapters.vcStore, 
+  const didService = new VeramoDidService(agent, effectiveLogger);
+  const keyService = new VeramoKeyService(agent, effectiveLogger);
+  const vcService = new VeramoVCService(
+    agent,
+    adapters.vcStore,
     {},
     effectiveLogger
   );

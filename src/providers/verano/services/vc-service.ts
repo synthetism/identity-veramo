@@ -10,12 +10,12 @@ import { Result } from "@synet/patterns";
 import type { Logger } from "@synet/logger";
 import type { SynetVerifiableCredential, BaseCredentialSubject } from "@synet/credentials";
 import type { AbstractVCStore } from "../domain/interfaces/abstract-vc-store";
-import type {IVCService, VCServiceOptions} from "../../../shared/provider";
+import type {  IVCServiceProvider, VCServiceOptions} from "../../../shared/provider";
 
 /**
  * Service for managing Verifiable Credentials with vault storage
  */
-export class VCService implements IVCService {
+export class VeramoVCService implements IVCServiceProvider {
   constructor(
     private readonly agent: TAgent<
       IKeyManager & IDIDManager & ICredentialPlugin

@@ -2,7 +2,7 @@ import path from "node:path";
 import lockfile from 'proper-lockfile';  // You'll need to install this package
 import type { IndexEntry, IndexRecord } from "../types";
 import type { IFileVCIndexer } from "../file-vc-indexer.interface";
-import type { IFileSystem } from "../../filesystem/filesystem.interface";
+import type { IFileSystem } from "@synet/patterns/fs";
 import type { Logger } from "@synet/logger";
 
 /**

@@ -1,7 +1,7 @@
 import { Result } from "@synet/patterns";
 import type { Logger } from "@synet/logger";
 import type { IDIDManager, IIdentifier, TAgent, TKeyType } from "@veramo/core";
-import type { IDidService } from "../../../shared/provider";
+import type { IDidServiceProvider } from "../../../shared/provider";
 import Debug from 'debug'
 const debug = Debug('synet:identity:did-service');
 
@@ -19,7 +19,7 @@ const debug = Debug('synet:identity:did-service');
 /**
  * Veramo implementation of the DID service
  */
-export class DidService implements IDidService {
+export class VeramoDidService implements IDidServiceProvider {
   constructor(
     private agent: TAgent<IDIDManager>,
     private logger?: Logger,

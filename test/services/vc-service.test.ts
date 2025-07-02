@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { VCService } from '../../src/providers/verano/services/vc-service';
 import path from 'node:path';
-import { MemFileSystem } from '../../src/storage/filesystem/memory';
-import { FileVCStore } from '../../src/storage/vcs/adapters/file-vc-store';
+import { MemFileSystem } from '../../src/infrastructure/filesystem/memory';
+import { FileVCStore } from '../../src/infrastructure/vcs/adapters/file-vc-store';
 import  { mockLogger } from '../fixtures/mockLogger';
 import { mockAgent } from '../fixtures/mockAgent';
 import type { Logger } from '@synet/logger';

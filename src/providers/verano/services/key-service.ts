@@ -13,7 +13,7 @@ import type {
 } from "@veramo/core-types";
 
 
-import type { IKeyService } from "../../../shared/provider";
+import type { IKeyServiceProvider } from "../../../shared/provider";
 /**
  * Interface for key store operations
  * methods:
@@ -25,7 +25,7 @@ import type { IKeyService } from "../../../shared/provider";
 /**
  * Veramo implementation of the key service
  */
-export class KeyService implements IKeyService {
+export class VeramoKeyService implements IKeyServiceProvider {
   constructor(
     private agent: TAgent<IKeyManager>,
     private logger?: Logger,

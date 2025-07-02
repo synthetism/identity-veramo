@@ -2,12 +2,11 @@ import { Result } from "@synet/patterns";
 import type { Logger } from "@synet/logger";
 import type { IIdentifier, KeyMetadata, IKey, TKeyType, IIdentity } from "@synet/identity-core";
 import { Identity } from "@synet/identity-core";
-import type { IVCService, IKeyService, IDidService } from "../shared/provider";
+import type { IDidServiceProvider, IKeyServiceProvider, IVCServiceProvider } from "../shared/provider";
 import type { SynetVerifiableCredential, IdentitySubject } from "@synet/credentials";
 import { CredentialType } from "@synet/credentials";
 import type { IVaultOperator } from "@synet/vault-core";
 import { IdentityVault } from "@synet/vault-core";
-import { VaultId } from "@synet/vault-core";
 //import { IdentityUnit } from "../domain/value-objects/identity";
 /**
  * Identity Service Options
@@ -24,9 +23,9 @@ export interface IdentityServiceOptions {
 export class IdentityService {
   private vaultId:string;
   constructor(
-    private didService: IDidService,
-    private keyService: IKeyService,
-    private vcService: IVCService,
+    private didService: IDidServiceProvider,
+    private keyService: IKeyServiceProvider,
+    private vcService: IVCServiceProvider,
     private vault: IVaultOperator,
     public readonly options: IdentityServiceOptions = {},
     public readonly logger?: Logger,

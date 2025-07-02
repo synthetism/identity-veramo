@@ -61,7 +61,10 @@ export class VaultManager implements IVaultManager {
       await this.ensureVaultExists();
       
       try {
+        
         const vault = await this.vaultStorage.get(this.vaultId) as IdentityVault;
+
+
         (vault as Record<keyof IdentityVault, unknown>)[sectionKey] = data;
         await this.vaultStorage.update(this.vaultId, vault);
       } catch (error: unknown) {

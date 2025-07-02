@@ -1,4 +1,4 @@
-import type { IFileSystem } from "../../filesystem/filesystem.interface";
+import type { IAsyncFileSystem } from "@synet/patterns/fs/promises";
 import VError  from "verror";
 import type { Logger } from "@synet/logger";
 import path from "node:path";
@@ -7,7 +7,7 @@ import type { IVCStore } from "../vc-store.interface";
 export class FileVCStore<T> implements IVCStore<T> {
   constructor(
     private readonly dir: string,
-    private readonly fs: IFileSystem,
+    private readonly fs: IAsyncFileSystem,
     private readonly logger?: Logger,
   ) {}
 
