@@ -1,6 +1,6 @@
 import { Result } from "@synet/patterns";
 import type { Logger } from "@synet/logger";
-import type { IIdentifier, KeyMetadata, IKey, TKeyType, IIdentity } from "@synet/identity-core";
+import type { IIdentifier, KeyMetadata, IKey, TKeyType, IIdentity, ManagedPrivateKey } from "@synet/identity-core";
 import { Identity } from "@synet/identity-core";
 import type { SynetVerifiableCredential, IdentitySubject } from "@synet/credentials";
 import { CredentialType } from "@synet/credentials";
@@ -133,13 +133,21 @@ export class IdentityService {
         );
       }
 
+      const privateKeyStore: ManagedPrivateKey = {
+     
+        type: type as TKeyType,
+        alias,
+        privateKeyHex: privateKeyHex || '',
+
+      }
+
       const vaultCreateResult = IdentityVault.create({
         id: vaultId,
         identity: identityResult.value,
         keyStore: [keyResult.value],
         didStore: [didResult.value],
         vcStore: [vc],
-        privateKeyStore: [], 
+        privateKeyStore: [privateKeyStore], 
         wgKeyStore: [], // Optional, can be managed separately
         createdAt: new Date(),
       });
