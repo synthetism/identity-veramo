@@ -29,7 +29,7 @@ async function runMemoryDemo() {
 
     // Test basic identity operations
     const uniqueId = Date.now();
-    const testAlias = `test-user-${uniqueId}`;
+    const testAlias = `0en`;
     
     console.log(`\n📝 Creating test identity: ${testAlias}...`);
     const createResult = await identityService.createIdentity(testAlias, {
