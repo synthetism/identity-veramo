@@ -2,8 +2,8 @@ import type { IIdentifier } from "@synet/identity-core";
 import { AbstractDIDStore } from "@synet/vault-core";
 import type { Logger } from "@synet/logger";
 import VError  from "verror";
-import type { IFileSystem } from "@synet/patterns/fs";
 import type { AdapterData } from "@synet/vault-core";
+import type { IFileSystem } from "@synet/fs";
 // File-based DID store implementation
 
 export class DIDStore extends AbstractDIDStore {
